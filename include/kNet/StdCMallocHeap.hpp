@@ -3,7 +3,7 @@
 // Author(s):       kNet Authors <https://github.com/juj/kNet>
 //                  iFarbod <>
 //
-// Copyright (c) 2015-2017 CtNorth Team
+// Copyright (c) 2015-2017 Project CTNorth
 //
 // Distributed under the MIT license (See accompanying file LICENSE or copy at
 // https://opensource.org/licenses/MIT)
@@ -13,11 +13,11 @@
 /** @file StdCMallocHeap.h
     @brief Implements the allocator object for allocating memory using malloc and free. */
 
-#include <cstdlib>
 #include <cassert>
+#include <cstdlib>
 
-#include "Allocator.hpp"
 #include "Alignment.hpp"
+#include "Allocator.hpp"
 
 namespace kNet
 {
@@ -27,21 +27,22 @@ namespace kNet
 class StdCAlloc
 {
 public:
-//    StdCAlloc(){}
-//    StdCAlloc(const StdCAlloc &);
-//    ~StdCAlloc() {}
+    //    StdCAlloc(){}
+    //    StdCAlloc(const StdCAlloc &);
+    //    ~StdCAlloc() {}
 
-    static inline void *Alloc(StdCAlloc *, size_t size, size_t alignment, const char * /*nameTag*/ = 0, AllocFlags /*flags*/ = AFAllocLow)
+    static inline void* Alloc(
+        StdCAlloc*, size_t size, size_t alignment, const char* /*nameTag*/ = 0, AllocFlags /*flags*/ = AFAllocLow)
     {
         assert(IS_POW2(alignment));
 #ifdef _MSC_VER
-        void *ptr = _aligned_malloc(size, alignment);
+        void* ptr = _aligned_malloc(size, alignment);
 #else
-        void *ptr = malloc(size); ///\todo aligned_malloc on unix?
+        void* ptr = malloc(size);  ///\todo aligned_malloc on unix?
 #endif
         return ptr;
     }
-    static inline void Free(StdCAlloc *, void *ptr)
+    static inline void Free(StdCAlloc*, void* ptr)
     {
 #ifdef _MSC_VER
         _aligned_free(ptr);
@@ -51,7 +52,7 @@ public:
     }
 
     ///\todo Perhaps support Resize(void *ptr, size_t newSize); ?
-    static inline size_t Size(StdCAlloc *, void *ptr)
+    static inline size_t Size(StdCAlloc*, void* ptr)
     {
 #ifdef _MSC_VER
         return ::_msize(ptr);
@@ -62,4 +63,4 @@ public:
     }
 };
 
-} // ~kNet
+}  // ~kNet

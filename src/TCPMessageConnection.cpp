@@ -3,7 +3,7 @@
 // Author(s):       kNet Authors <https://github.com/juj/kNet>
 //                  iFarbod <>
 //
-// Copyright (c) 2015-2017 CtNorth Team
+// Copyright (c) 2015-2017 Project CTNorth
 //
 // Distributed under the MIT license (See accompanying file LICENSE or copy at
 // https://opensource.org/licenses/MIT)
@@ -14,25 +14,26 @@
 #include <sstream>
 #include "kNet/Allocator.hpp"
 
-#include "kNet/DebugMemoryLeakCheck.hpp"
-#include "kNet/TCPMessageConnection.hpp"
-#include "kNet/NetworkLogging.hpp"
-#include "kNet/DataSerializer.hpp"
+#include "base/Macros.hpp"
 #include "kNet/DataDeserializer.hpp"
-#include "kNet/VLEPacker.hpp"
+#include "kNet/DataSerializer.hpp"
+#include "kNet/DebugMemoryLeakCheck.hpp"
 #include "kNet/NetException.hpp"
 #include "kNet/Network.hpp"
+#include "kNet/NetworkLogging.hpp"
+#include "kNet/TCPMessageConnection.hpp"
+#include "kNet/VLEPacker.hpp"
 
 namespace kNet
 {
 
-/// The maximum size for a TCP message we will allow to be received. If we receive a message larger than this, we consider
-/// it as a protocol violation and kill the connection.
-static const u32 cMaxReceivableTCPMessageSize = 10 * 1024 * 1024; ///\todo Make this configurable for the connection.
+/// The maximum size for a TCP message we will allow to be received. If we receive a message larger than this, we
+/// consider it as a protocol violation and kill the connection.
+static const u32 cMaxReceivableTCPMessageSize = 10 * 1024 * 1024;  ///\todo Make this configurable for the connection.
 
-TCPMessageConnection::TCPMessageConnection(Network *owner, NetworkServer *ownerServer, Socket *socket, ConnectionState startingState)
-:MessageConnection(owner, ownerServer, socket, startingState),
-tcpInboundSocketData(64 * 1024)
+TCPMessageConnection::TCPMessageConnection(
+    Network* owner, NetworkServer* ownerServer, Socket* socket, ConnectionState startingState)
+    : MessageConnection(owner, ownerServer, socket, startingState), tcpInboundSocketData(64 * 1024)
 {
 }
 
@@ -42,7 +43,7 @@ TCPMessageConnection::~TCPMessageConnection()
         owner->CloseConnection(this);
 }
 
-MessageConnection::SocketReadResult TCPMessageConnection::ReadSocket(size_t &totalBytesRead)
+MessageConnection::SocketReadResult TCPMessageConnection::ReadSocket(size_t& totalBytesRead)
 {
     AssertInWorkerThreadContext();
 
@@ -60,8 +61,9 @@ MessageConnection::SocketReadResult TCPMessageConnection::ReadSocket(size_t &tot
 
     if (inboundMessageQueue.CapacityLeft() < arbitraryInboundMessageCapacityLimit)
     {
-        KNET_LOG(LogVerbose, "TCPMessageConnection::ReadSocket: Read throttled! Application cannot consume data fast enough.");
-        return SocketReadThrottled; // Can't read in new data, since the client app can't process it so fast.
+        KNET_LOG(LogVerbose,
+            "TCPMessageConnection::ReadSocket: Read throttled! Application cannot consume data fast enough.");
+        return SocketReadThrottled;  // Can't read in new data, since the client app can't process it so fast.
     }
 
     // This is an arbitrary throttle limit on how much data we read in this function at once. Without this limit,
@@ -71,7 +73,7 @@ MessageConnection::SocketReadResult TCPMessageConnection::ReadSocket(size_t &tot
     const size_t maxBytesToRead = 1024 * 1024;
 
     // Pump the socket's receiving end until it's empty or can't process any more for now.
-    while(totalBytesRead < maxBytesToRead)
+    while (totalBytesRead < maxBytesToRead)
     {
         assert(socket);
 
@@ -83,9 +85,9 @@ MessageConnection::SocketReadResult TCPMessageConnection::ReadSocket(size_t &tot
                 return SocketReadThrottled;
         }
 
-        OverlappedTransferBuffer *buffer = socket->BeginReceive();
+        OverlappedTransferBuffer* buffer = socket->BeginReceive();
         if (!buffer)
-            break; // Nothing to receive.
+            break;  // Nothing to receive.
 
         // If we can't fit the data we got, compact the ring buffer.
         if (buffer->bytesContains > tcpInboundSocketData.ContiguousFreeBytesLeft())
@@ -93,11 +95,17 @@ MessageConnection::SocketReadResult TCPMessageConnection::ReadSocket(size_t &tot
             tcpInboundSocketData.Compact();
             if (buffer->bytesContains > tcpInboundSocketData.ContiguousFreeBytesLeft())
             {
-                // Even compacting didn't get enough space to fit the message, so resize the ring buffer to be able to contain the message.
-                // At least always double the capacity of the buffer, so that we don't waste effort incrementing the capacity by too small amounts at a time.
-                tcpInboundSocketData.Resize(max(tcpInboundSocketData.Capacity()*2, tcpInboundSocketData.Capacity() + buffer->bytesContains - tcpInboundSocketData.ContiguousFreeBytesLeft()));
-                KNET_LOG(LogWaits, "TCPMessageConnection::ReadSocket: Performance warning! Resized the capacity of the receive ring buffer to %d bytes to accommodate a message of size %d (now have %d bytes of free space)",
-                    tcpInboundSocketData.Capacity(), buffer->bytesContains, tcpInboundSocketData.ContiguousFreeBytesLeft());
+                // Even compacting didn't get enough space to fit the message, so resize the ring buffer to be able to
+                // contain the message. At least always double the capacity of the buffer, so that we don't waste effort
+                // incrementing the capacity by too small amounts at a time.
+                tcpInboundSocketData.Resize(
+                    max(tcpInboundSocketData.Capacity() * 2, tcpInboundSocketData.Capacity() + buffer->bytesContains -
+                                                                 tcpInboundSocketData.ContiguousFreeBytesLeft()));
+                KNET_LOG(LogWaits,
+                    "TCPMessageConnection::ReadSocket: Performance warning! Resized the capacity of the receive ring "
+                    "buffer to %d bytes to accommodate a message of size %d (now have %d bytes of free space)",
+                    tcpInboundSocketData.Capacity(), buffer->bytesContains,
+                    tcpInboundSocketData.ContiguousFreeBytesLeft());
             }
         }
 
@@ -110,7 +118,7 @@ MessageConnection::SocketReadResult TCPMessageConnection::ReadSocket(size_t &tot
         /// two OverlappedTransferBuffers and only in that case memcpy that message to form a
         /// single contiguous memory area.
         memcpy(tcpInboundSocketData.End(), buffer->buffer.buf, buffer->bytesContains);
-        tcpInboundSocketData.Inserted(buffer->bytesContains); // Mark the memory area in the ring buffer as used.
+        tcpInboundSocketData.Inserted(buffer->bytesContains);  // Mark the memory area in the ring buffer as used.
 
         totalBytesRead += buffer->bytesContains;
         socket->EndReceive(buffer);
@@ -137,11 +145,11 @@ MessageConnection::SocketReadResult TCPMessageConnection::ReadSocket(size_t &tot
 /// Checks that the specified conditions for the container apply.
 /// Warning: This is a non-threadsafe check for the container, only to be used for debugging.
 /// Warning #2: This function is very slow, as it performs a N^2 search through the container.
-template<typename T>
-bool ContainerUniqueAndNoNullElements(const std::vector<T> &cont)
+template <typename T>
+bool ContainerUniqueAndNoNullElements(const std::vector<T>& cont)
 {
-    for(size_t i = 0; i < cont.size(); ++i)
-        for(size_t j = i+1; j < cont.size(); ++j)
+    for (size_t i = 0; i < cont.size(); ++i)
+        for (size_t j = i + 1; j < cont.size(); ++j)
             if (cont[i] == cont[j] || cont[i] == 0)
                 return false;
     return true;
@@ -159,8 +167,8 @@ MessageConnection::PacketSendResult TCPMessageConnection::SendOutPacket()
     if (!socket || !socket->IsWriteOpen())
     {
         KNET_LOG(LogVerbose, "TCPMessageConnection::SendOutPacket: Socket is not write open %p!", socket);
-        if (connectionState == ConnectionOK) ///\todo This is slightly annoying to manually update the state here,
-            connectionState = ConnectionPeerClosed; /// reorganize to be able to have this automatically apply.
+        if (connectionState == ConnectionOK)  ///\todo This is slightly annoying to manually update the state here,
+            connectionState = ConnectionPeerClosed;  /// reorganize to be able to have this automatically apply.
         if (connectionState == ConnectionDisconnecting)
             connectionState = ConnectionClosed;
         return PacketSendSocketClosed;
@@ -174,20 +182,21 @@ MessageConnection::PacketSendResult TCPMessageConnection::SendOutPacket()
     // Get the maximum number of bytes we can coalesce for the send() call. This is only a soft limit
     // in the sense that if we encounter a single message that is larger than this limit, then we try
     // to send that through in one send() call.
-//    const size_t maxSendSize = socket->MaxSendSize();
+    //    const size_t maxSendSize = socket->MaxSendSize();
 
     // Push out all the pending data to the socket.
-    OverlappedTransferBuffer *overlappedTransfer = 0;
+    OverlappedTransferBuffer* overlappedTransfer = 0;
 
     int numMessagesPacked = 0;
     DataSerializer writer;
-//    assert(ContainerUniqueAndNoNullElements(outboundQueue)); // This precondition should always hold (but very heavy to test, uncomment to debug)
-    while(outboundQueue.Size() > 0)
+    //    assert(ContainerUniqueAndNoNullElements(outboundQueue)); // This precondition should always hold (but very
+    //    heavy to test, uncomment to debug)
+    while (outboundQueue.Size() > 0)
     {
 #ifdef KNET_NO_MAXHEAP
-        NetworkMessage *msg = *outboundQueue.Front();
+        NetworkMessage* msg = *outboundQueue.Front();
 #else
-        NetworkMessage *msg = outboundQueue.Front();
+        NetworkMessage* msg = outboundQueue.Front();
 #endif
 
         if (msg->obsolete)
@@ -199,9 +208,10 @@ MessageConnection::PacketSendResult TCPMessageConnection::SendOutPacket()
         }
 
         const int encodedMsgIdLength = VLE8_16_32::GetEncodedBitLength(msg->id) / 8;
-        const size_t messageContentSize = msg->dataSize + encodedMsgIdLength; // 1 byte: Message ID. X bytes: Content.
+        const size_t messageContentSize = msg->dataSize + encodedMsgIdLength;  // 1 byte: Message ID. X bytes: Content.
         const int encodedMsgSizeLength = VLE8_16_32::GetEncodedBitLength(messageContentSize) / 8;
-        const size_t totalMessageSize = messageContentSize + encodedMsgSizeLength; // 2 bytes: Content length. X bytes: Content.
+        const size_t totalMessageSize =
+            messageContentSize + encodedMsgSizeLength;  // 2 bytes: Content length. X bytes: Content.
 
         if (!overlappedTransfer)
         {
@@ -233,36 +243,41 @@ MessageConnection::PacketSendResult TCPMessageConnection::SendOutPacket()
 #endif
         outboundQueue.PopFront();
     }
-//    assert(ContainerUniqueAndNoNullElements(serializedMessages)); // This precondition should always hold (but very heavy to test, uncomment to debug)
+    //    assert(ContainerUniqueAndNoNullElements(serializedMessages)); // This precondition should always hold (but
+    //    very heavy to test, uncomment to debug)
 
     if (writer.BytesFilled() == 0 && outboundQueue.Size() > 0)
-        KNET_LOG(LogError, "Failed to send any messages to socket %s! (Probably next message was too big to fit in the buffer).", socket->ToString().c_str());
+        KNET_LOG(LogError,
+            "Failed to send any messages to socket %s! (Probably next message was too big to fit in the buffer).",
+            socket->ToString().c_str());
 
     overlappedTransfer->bytesContains = writer.BytesFilled();
     bool success = socket->EndSend(overlappedTransfer);
 
-    if (!success) // If we failed to send, put all the messages back into the outbound queue to wait for the next send round.
+    if (!success)  // If we failed to send, put all the messages back into the outbound queue to wait for the next send
+                   // round.
     {
-        for(size_t i = 0; i < serializedMessages.size(); ++i)
+        for (size_t i = 0; i < serializedMessages.size(); ++i)
 #ifdef KNET_NO_MAXHEAP
             outboundQueue.InsertWithResize(serializedMessages[i]);
 #else
             outboundQueue.Insert(serializedMessages[i]);
 #endif
-//        assert(ContainerUniqueAndNoNullElements(outboundQueue));
+        //        assert(ContainerUniqueAndNoNullElements(outboundQueue));
 
         KNET_LOG(LogError, "TCPMessageConnection::SendOutPacket() failed: Could not initiate overlapped transfer!");
 
         return PacketSendSocketFull;
     }
 
-    KNET_LOG(LogData, "TCPMessageConnection::SendOutPacket: Sent %d bytes (%d messages) to peer %s.", (int)writer.BytesFilled(), (int)serializedMessages.size(), socket->ToString().c_str());
+    KNET_LOG(LogData, "TCPMessageConnection::SendOutPacket: Sent %d bytes (%d messages) to peer %s.",
+        (int)writer.BytesFilled(), (int)serializedMessages.size(), socket->ToString().c_str());
     AddOutboundStats(writer.BytesFilled(), 1, numMessagesPacked);
     ADDEVENT("tcpDataOut", (float)writer.BytesFilled(), "bytes");
 
     // The messages in serializedMessages array are now in the TCP driver to handle. It will guarantee
     // delivery if possible, so we can free the messages already.
-    for(size_t i = 0; i < serializedMessages.size(); ++i)
+    for (size_t i = 0; i < serializedMessages.size(); ++i)
     {
 #ifdef KNET_NETWORK_PROFILING
         std::stringstream ss;
@@ -279,7 +294,7 @@ MessageConnection::PacketSendResult TCPMessageConnection::SendOutPacket()
     return PacketSendOK;
 }
 
-void TCPMessageConnection::DoUpdateConnection() // [worker thread]
+void TCPMessageConnection::DoUpdateConnection()  // [worker thread]
 {
     ExtractMessages();
 }
@@ -292,8 +307,8 @@ void TCPMessageConnection::SendOutPackets()
         return;
 
     PacketSendResult result = PacketSendOK;
-    int maxSends = 500; // Place an arbitrary limit to how many packets we will send at a time.
-    while(result == PacketSendOK && maxSends-- > 0)
+    int maxSends = 500;  // Place an arbitrary limit to how many packets we will send at a time.
+    while (result == PacketSendOK && maxSends-- > 0)
         result = SendOutPacket();
 
     // Thread-safely clear the eventMsgsOutAvailable event if we don't have any messages to process.
@@ -310,18 +325,18 @@ void TCPMessageConnection::ExtractMessages()
     try
     {
         size_t numMessagesReceived = 0;
-        for(;;)
+        for (;;)
         {
-            if (tcpInboundSocketData.Size() == 0) // No new packets in yet.
+            if (tcpInboundSocketData.Size() == 0)  // No new packets in yet.
                 break;
 
-            if (inboundMessageQueue.CapacityLeft() == 0) // If the application can't take in any new messages, abort.
+            if (inboundMessageQueue.CapacityLeft() == 0)  // If the application can't take in any new messages, abort.
                 break;
 
             DataDeserializer reader(tcpInboundSocketData.Begin(), tcpInboundSocketData.Size());
             u32 messageSize = reader.ReadVLE<VLE8_16_32>();
             if (messageSize == DataDeserializer::VLEReadError)
-                break; // The packet hasn't yet been streamed in.
+                break;  // The packet hasn't yet been streamed in.
 
             if (messageSize == 0 || messageSize > cMaxReceivableTCPMessageSize)
             {
@@ -330,7 +345,8 @@ void TCPMessageConnection::ExtractMessages()
             }
 
             if (reader.BytesLeft() < messageSize)
-                break; // We haven't yet received the whole message, have to abort parsing for now and wait for the whole message.
+                break;  // We haven't yet received the whole message, have to abort parsing for now and wait for the
+                        // whole message.
 
             HandleInboundMessage(0, reader.CurrentData(), messageSize);
             reader.SkipBytes(messageSize);
@@ -344,8 +360,10 @@ void TCPMessageConnection::ExtractMessages()
             ++numMessagesReceived;
         }
         AddInboundStats(0, 0, numMessagesReceived);
-    } catch(const NetException& e)
+    }
+    catch (const NetException& e)
     {
+        ignore_result(e);
         KNET_LOG(LogError, "TCPMessageConnection::ExtractMessages() caught a network exception: \"%s\"!", e.what());
         if (socket)
             socket->Close();
@@ -370,13 +388,12 @@ void TCPMessageConnection::DumpConnectionStatus() const
         "\ttcpInboundSocketData.Capacity(): %d\n"
         "\ttcpInboundSocketData.Size(): %d\n"
         "\ttcpInboundSocketData.ContiguousFreeBytesLeft(): %d\n",
-        tcpInboundSocketData.Capacity(), // Note: This accesses a shared variable from the worker thread in a thread-unsafe way, and can crash. Therefore only use this function for debugging.
-        tcpInboundSocketData.Size(),
-        tcpInboundSocketData.ContiguousFreeBytesLeft());
+        tcpInboundSocketData.Capacity(),  // Note: This accesses a shared variable from the worker thread in a
+                                          // thread-unsafe way, and can crash. Therefore only use this function for
+                                          // debugging.
+        tcpInboundSocketData.Size(), tcpInboundSocketData.ContiguousFreeBytesLeft());
 
     KNET_LOGUSER(str);
-
-
 }
 
 unsigned long TCPMessageConnection::TimeUntilCanSendPacket() const
@@ -386,4 +403,4 @@ unsigned long TCPMessageConnection::TimeUntilCanSendPacket() const
     return 0;
 }
 
-} // ~kNet
+}  // ~kNet

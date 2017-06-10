@@ -3,7 +3,7 @@
 // Author(s):       kNet Authors <https://github.com/juj/kNet>
 //                  iFarbod <>
 //
-// Copyright (c) 2015-2017 CtNorth Team
+// Copyright (c) 2015-2017 Project CTNorth
 //
 // Distributed under the MIT license (See accompanying file LICENSE or copy at
 // https://opensource.org/licenses/MIT)
@@ -14,22 +14,19 @@
 #include <cassert>
 #include <exception>
 
-#include "kNet/Thread.hpp"
-#include "kNet/NetworkLogging.hpp"
+#include "base/Macros.hpp"
 #include "kNet/Clock.hpp"
 #include "kNet/NetException.hpp"
 #include "kNet/Network.hpp"
+#include "kNet/NetworkLogging.hpp"
+#include "kNet/Thread.hpp"
 
 #include "kNet/DebugMemoryLeakCheck.hpp"
 
 namespace kNet
 {
 
-Thread::Thread()
-:threadHandle(NULL),
-threadId(0),
-threadEnabled(false),
-invoker(0)
+Thread::Thread() : threadHandle(NULL), threadId(0), threadEnabled(false), invoker(0)
 {
 }
 
@@ -39,7 +36,10 @@ Thread::~Thread()
     delete invoker;
 }
 
-bool Thread::ShouldQuit() const { return threadHandle == NULL || threadEnabled == false; }
+bool Thread::ShouldQuit() const
+{
+    return threadHandle == NULL || threadEnabled == false;
+}
 
 bool Thread::IsRunning() const
 {
@@ -78,7 +78,7 @@ void Thread::Stop()
     assert(threadHandle != 0);
 
     int numTries = 100;
-    while(numTries-- > 0)
+    while (numTries-- > 0)
     {
         DWORD exitCode = 0;
         BOOL result = GetExitCodeThread(threadHandle, &exitCode);
@@ -100,7 +100,7 @@ void Thread::Stop()
     if (threadHandle != NULL)
     {
         TerminateThread(threadHandle, (DWORD)-1);
-//        CloseHandle(threadHandle);
+        //        CloseHandle(threadHandle);
         KNET_LOG(LogError, "Warning: Had to forcibly terminate thread!");
     }
 
@@ -121,7 +121,7 @@ DWORD WINAPI ThreadEntryPoint(LPVOID lpParameter)
 {
     KNET_LOG(LogInfo, "ThreadEntryPoint: Thread started with param 0x%08X.", lpParameter);
 
-    Thread *thread = reinterpret_cast<Thread*>(lpParameter);
+    Thread* thread = reinterpret_cast<Thread*>(lpParameter);
     if (!thread)
     {
         KNET_LOG(LogError, "Invalid thread start parameter 0!");
@@ -143,13 +143,18 @@ void Thread::_ThreadRun()
         }
 
         invoker->Invoke();
-    } catch(NetException &e)
+    }
+    catch (NetException& e)
     {
+        ignore_result(e);
         KNET_LOG(LogError, "NetException thrown in thread: %s.", e.what());
-    } catch(std::exception &e)
+    }
+    catch (std::exception& e)
     {
+        ignore_result(e);
         KNET_LOG(LogError, "std::exception thrown in thread: %s.", e.what());
-    } catch(...)
+    }
+    catch (...)
     {
         KNET_LOG(LogError, "Unknown exception thrown in thread.");
     }
@@ -195,4 +200,4 @@ ThreadId Thread::NullThreadId()
     return 0;
 }
 
-} // ~kNet
+}  // ~kNet

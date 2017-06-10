@@ -3,7 +3,7 @@
 // Author(s):       kNet Authors <https://github.com/juj/kNet>
 //                  iFarbod <>
 //
-// Copyright (c) 2015-2017 CtNorth Team
+// Copyright (c) 2015-2017 Project CTNorth
 //
 // Distributed under the MIT license (See accompanying file LICENSE or copy at
 // https://opensource.org/licenses/MIT)
@@ -29,11 +29,11 @@ class NetworkWorkerThread
 public:
     NetworkWorkerThread();
 
-    void AddConnection(MessageConnection *connection);
-    void RemoveConnection(MessageConnection *connection);
+    void AddConnection(MessageConnection* connection);
+    void RemoveConnection(MessageConnection* connection);
 
-    void AddServer(NetworkServer *server);
-    void RemoveServer(NetworkServer *server);
+    void AddServer(NetworkServer* server);
+    void RemoveServer(NetworkServer* server);
 
     void StartThread();
     void StopThread();
@@ -41,11 +41,11 @@ public:
     int NumConnections() const;
     int NumServers() const;
 
-    Thread &ThreadObject() { return workThread; }
+    Thread& ThreadObject() { return workThread; }
 
 private:
-    Lockable<std::vector<MessageConnection *> > connections;
-    Lockable<std::vector<NetworkServer *> > servers;
+    Lockable<std::vector<MessageConnection*>> connections;
+    Lockable<std::vector<NetworkServer*>> servers;
 
     Thread workThread;
 
@@ -57,4 +57,4 @@ private:
 DWORD WINAPI NetworkWorkerThreadMain(LPVOID lpParameter);
 #endif
 
-} // ~kNet
+}  // ~kNet

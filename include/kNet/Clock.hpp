@@ -3,7 +3,7 @@
 // Author(s):       kNet Authors <https://github.com/juj/kNet>
 //                  iFarbod <>
 //
-// Copyright (c) 2015-2017 CtNorth Team
+// Copyright (c) 2015-2017 Project CTNorth
 //
 // Distributed under the MIT license (See accompanying file LICENSE or copy at
 // https://opensource.org/licenses/MIT)
@@ -31,7 +31,7 @@ class Clock
 {
 public:
     Clock();
-//    ~Clock() {}
+    //    ~Clock() {}
 
     /// Sleeps the current thread for the given amount of milliseconds.
     static void Sleep(int milliseconds);
@@ -72,10 +72,7 @@ public:
     static inline tick_t TicksPerMillisecond() { return TicksPerSec() / 1000; }
 
     /// Returns the number of ticks occurring between the two wallclock times.
-    static inline tick_t TicksInBetween(tick_t newTick, tick_t oldTick)
-    {
-        return (tick_t)(newTick - oldTick);
-    }
+    static inline tick_t TicksInBetween(tick_t newTick, tick_t oldTick) { return (tick_t)(newTick - oldTick); }
 
     /// Returns true if newTick represents a later wallclock time than oldTick.
     static inline bool IsNewer(tick_t newTick, tick_t oldTick)
@@ -95,22 +92,34 @@ public:
     static inline float TicksToSecondsF(tick_t ticks) { return ticks / (float)TicksPerSec(); }
     static inline double TicksToSecondsD(tick_t ticks) { return ticks / (double)TicksPerSec(); }
 
-    static inline float TimespanToMillisecondsF(tick_t oldTick, tick_t newTick) { return TicksToMillisecondsF(TicksInBetween(newTick, oldTick)); }
-    static inline double TimespanToMillisecondsD(tick_t oldTick, tick_t newTick) { return TicksToMillisecondsD(TicksInBetween(newTick, oldTick)); }
+    static inline float TimespanToMillisecondsF(tick_t oldTick, tick_t newTick)
+    {
+        return TicksToMillisecondsF(TicksInBetween(newTick, oldTick));
+    }
+    static inline double TimespanToMillisecondsD(tick_t oldTick, tick_t newTick)
+    {
+        return TicksToMillisecondsD(TicksInBetween(newTick, oldTick));
+    }
 
-    static inline float TimespanToSecondsF(tick_t oldTick, tick_t newTick) { return TicksToSecondsF(TicksInBetween(newTick, oldTick)); }
-    static inline double TimespanToSecondsD(tick_t oldTick, tick_t newTick) { return TicksToSecondsD(TicksInBetween(newTick, oldTick)); }
+    static inline float TimespanToSecondsF(tick_t oldTick, tick_t newTick)
+    {
+        return TicksToSecondsF(TicksInBetween(newTick, oldTick));
+    }
+    static inline double TimespanToSecondsD(tick_t oldTick, tick_t newTick)
+    {
+        return TicksToSecondsD(TicksInBetween(newTick, oldTick));
+    }
 
 private:
-    static tick_t appStartTime;      ///< Application startup time in ticks.
+    static tick_t appStartTime;  ///< Application startup time in ticks.
 
     /// Initializes clock tick frequency and marks the application startup time.
     static void InitClockData();
 
 #ifdef _WIN32
-    static LARGE_INTEGER ddwTimerFrequency; ///< Ticks per second.
-    static LARGE_INTEGER ddwTimer;          ///< Temporary storage for Win32 function calls.
+    static LARGE_INTEGER ddwTimerFrequency;  ///< Ticks per second.
+    static LARGE_INTEGER ddwTimer;           ///< Temporary storage for Win32 function calls.
 #endif
 };
 
-} // ~kNet
+}  // ~kNet

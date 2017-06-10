@@ -3,7 +3,7 @@
 // Author(s):       kNet Authors <https://github.com/juj/kNet>
 //                  iFarbod <>
 //
-// Copyright (c) 2015-2017 CtNorth Team
+// Copyright (c) 2015-2017 Project CTNorth
 //
 // Distributed under the MIT license (See accompanying file LICENSE or copy at
 // https://opensource.org/licenses/MIT)
@@ -11,11 +11,12 @@
 /** @file Clock.cpp
     @brief */
 
-#if defined(__unix__) || defined(__native_client__) || defined(__EMSCRIPTEN__) || defined(__ANDROID__) || defined(__APPLE__) || defined (__CYGWIN__)
-#include <time.h>
+#if defined(__unix__) || defined(__native_client__) || defined(__EMSCRIPTEN__) || defined(__ANDROID__) || \
+    defined(__APPLE__) || defined(__CYGWIN__)
 #include <errno.h>
 #include <string.h>
 #include <sys/time.h>
+#include <time.h>
 #endif
 
 #ifdef _WIN32
@@ -61,7 +62,7 @@ void Clock::InitClockData()
         appStartTime = static_cast<tick_t>(GetTickCount64());
     }
 
-    ///\todo Test here that the return values of QueryPerformanceCounter is nondecreasing.
+///\todo Test here that the return values of QueryPerformanceCounter is nondecreasing.
 #endif
 }
 
@@ -73,7 +74,7 @@ Clock::Clock()
 void Clock::Sleep(int milliseconds)
 {
 #ifdef WIN8RT
-#pragma WARNING(Clock::Sleep has not been implemented!)
+#pragma WARNING(Clock::Sleep has not been implemented !)
 #elif defined(_WIN32)
     ::Sleep(milliseconds);
 #elif !defined(__native_client__) && !defined(__EMSCRIPTEN__) && !defined(__APPLE__)
@@ -184,7 +185,7 @@ tick_t Clock::Tick()
 #if defined(__ANDROID__)
     struct timespec res;
     clock_gettime(CLOCK_REALTIME, &res);
-    return 1000000000ULL*res.tv_sec + (tick_t)res.tv_nsec;
+    return 1000000000ULL * res.tv_sec + (tick_t)res.tv_nsec;
 #elif defined(__EMSCRIPTEN__)
     // emscripten_get_now() returns a wallclock time as a float in milliseconds (1e-3).
     // scale it to microseconds (1e-6) and return as a tick.
@@ -221,10 +222,10 @@ unsigned long Clock::TickU32()
 tick_t Clock::TicksPerSec()
 {
 #if defined(__ANDROID__)
-    return 1000000000ULL; // 1e9 == nanoseconds.
+    return 1000000000ULL;  // 1e9 == nanoseconds.
 #elif defined(__EMSCRIPTEN__)
-    return 1000000ULL; // 1e6 == microseconds.
-//    return CLOCKS_PER_SEC;
+    return 1000000ULL;  // 1e6 == microseconds.
+                        //    return CLOCKS_PER_SEC;
 #elif defined(_WIN32)
     return ddwTimerFrequency.QuadPart;
 #elif defined(_POSIX_MONOTONIC_CLOCK)
@@ -236,4 +237,4 @@ tick_t Clock::TicksPerSec()
 #endif
 }
 
-} // ~kNet
+}  // ~kNet

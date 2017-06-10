@@ -3,7 +3,7 @@
 // Author(s):       kNet Authors <https://github.com/juj/kNet>
 //                  iFarbod <>
 //
-// Copyright (c) 2015-2017 CtNorth Team
+// Copyright (c) 2015-2017 Project CTNorth
 //
 // Distributed under the MIT license (See accompanying file LICENSE or copy at
 // https://opensource.org/licenses/MIT)
@@ -14,13 +14,13 @@
     @brief The class \ref kNet::EndPoint Endpoint. Represents an endpoint of a network connection. */
 
 #ifndef _WIN32
-#include <sys/types.h>
-#include <sys/socket.h>
 #include <netinet/in.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 #endif
 
-#include <cstring>
 #include <cstdio>
+#include <cstring>
 #include <string>
 
 namespace kNet
@@ -34,36 +34,40 @@ struct EndPoint
 
     unsigned short port;
 
-    EndPoint()
-    {
-        Reset();
-    }
+    EndPoint() { Reset(); }
 
     /// Clears all fields of this structure to zero.
-    void Reset()
-    {
-        memset(this, 0, sizeof(EndPoint));
-    }
+    void Reset() { memset(this, 0, sizeof(EndPoint)); }
 
     ///\todo Not IPv6-capable.
-    bool operator < (const EndPoint &rhs) const
+    bool operator<(const EndPoint& rhs) const
     {
-        if (ip[0] < rhs.ip[0]) return true;
-        if (ip[0] > rhs.ip[0]) return false;
-        if (ip[1] < rhs.ip[1]) return true;
-        if (ip[1] > rhs.ip[1]) return false;
-        if (ip[2] < rhs.ip[2]) return true;
-        if (ip[2] > rhs.ip[2]) return false;
-        if (ip[3] < rhs.ip[3]) return true;
-        if (ip[3] > rhs.ip[3]) return false;
-        if (port < rhs.port) return true;
-        if (port > rhs.port) return false;
+        if (ip[0] < rhs.ip[0])
+            return true;
+        if (ip[0] > rhs.ip[0])
+            return false;
+        if (ip[1] < rhs.ip[1])
+            return true;
+        if (ip[1] > rhs.ip[1])
+            return false;
+        if (ip[2] < rhs.ip[2])
+            return true;
+        if (ip[2] > rhs.ip[2])
+            return false;
+        if (ip[3] < rhs.ip[3])
+            return true;
+        if (ip[3] > rhs.ip[3])
+            return false;
+        if (port < rhs.port)
+            return true;
+        if (port > rhs.port)
+            return false;
 
         return false;
     }
 
     ///\todo Not IPv6-capable.
-    static EndPoint FromSockAddrIn(const sockaddr_in &addr)
+    static EndPoint FromSockAddrIn(const sockaddr_in& addr)
     {
         EndPoint endPoint;
 #ifdef _WIN32
@@ -115,9 +119,10 @@ struct EndPoint
     std::string ToString() const
     {
         char str[256];
-        sprintf(str, "%d.%d.%d.%d:%d", (unsigned int)ip[0], (unsigned int)ip[1], (unsigned int)ip[2], (unsigned int)ip[3], (unsigned int)port);
+        sprintf(str, "%d.%d.%d.%d:%d", (unsigned int)ip[0], (unsigned int)ip[1], (unsigned int)ip[2],
+            (unsigned int)ip[3], (unsigned int)port);
         return std::string(str);
     }
 };
 
-} // ~kNet
+}  // ~kNet

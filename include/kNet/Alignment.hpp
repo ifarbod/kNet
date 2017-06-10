@@ -3,7 +3,7 @@
 // Author(s):       kNet Authors <https://github.com/juj/kNet>
 //                  iFarbod <>
 //
-// Copyright (c) 2015-2017 CtNorth Team
+// Copyright (c) 2015-2017 Project CTNorth
 //
 // Distributed under the MIT license (See accompanying file LICENSE or copy at
 // https://opensource.org/licenses/MIT)
@@ -14,7 +14,7 @@
 
 #include "Types.hpp"
 
-// CtNorth: removed the KNET_UNIX definition
+// CTNorth: removed the KNET_UNIX definition
 #ifndef _WIN32
 #include <stdint.h>
 #endif
@@ -39,7 +39,8 @@ inline uintptr_t AlignUpPow2(uintptr_t pointer, u32 alignment)
     return (pointer + alignment - 1) & ~((uintptr_t)alignment - 1);
 }
 
-/// @return The given pointer aligned down to the previous pow2-boundary specified by alignment. (Alignment must be a pow2)
+/// @return The given pointer aligned down to the previous pow2-boundary specified by alignment. (Alignment must be a
+/// pow2)
 inline uintptr_t AlignDownPow2(uintptr_t pointer, u32 alignment)
 {
     assert(IS_POW2(alignment));
@@ -49,10 +50,10 @@ inline uintptr_t AlignDownPow2(uintptr_t pointer, u32 alignment)
 inline u32 RoundUpToNextPow2(u32 x)
 {
     x = x - 1;
-    x = x | (x >>  1);
-    x = x | (x >>  2);
-    x = x | (x >>  4);
-    x = x | (x >>  8);
+    x = x | (x >> 1);
+    x = x | (x >> 2);
+    x = x | (x >> 4);
+    x = x | (x >> 8);
     x = x | (x >> 16);
     return x + 1;
 }
@@ -60,13 +61,13 @@ inline u32 RoundUpToNextPow2(u32 x)
 inline u64 RoundUpToNextPow2(u64 x)
 {
     x = x - 1;
-    x = x | (x >>  1);
-    x = x | (x >>  2);
-    x = x | (x >>  4);
-    x = x | (x >>  8);
+    x = x | (x >> 1);
+    x = x | (x >> 2);
+    x = x | (x >> 4);
+    x = x | (x >> 8);
     x = x | (x >> 16);
     x = x | (x >> 32);
     return x + 1;
 }
 
-} // ~kNet
+}  // ~kNet

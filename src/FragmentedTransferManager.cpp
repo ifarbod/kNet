@@ -3,7 +3,7 @@
 // Author(s):       kNet Authors <https://github.com/juj/kNet>
 //                  iFarbod <>
 //
-// Copyright (c) 2015-2017 CtNorth Team
+// Copyright (c) 2015-2017 Project CTNorth
 //
 // Distributed under the MIT license (See accompanying file LICENSE or copy at
 // https://opensource.org/licenses/MIT)
@@ -15,39 +15,39 @@
 
 #include "kNet/DebugMemoryLeakCheck.hpp"
 
-#include "kNet/MessageConnection.hpp"
 #include "kNet/FragmentedTransferManager.hpp"
+#include "kNet/MessageConnection.hpp"
 #include "kNet/NetworkLogging.hpp"
-
 
 using namespace std;
 
 namespace kNet
 {
 
-void FragmentedSendManager::FragmentedTransfer::AddMessage(NetworkMessage *message)
+void FragmentedSendManager::FragmentedTransfer::AddMessage(NetworkMessage* message)
 {
     fragments.push_back(message);
     message->transfer = this;
 }
 
-bool FragmentedSendManager::FragmentedTransfer::RemoveMessage(NetworkMessage *message)
+bool FragmentedSendManager::FragmentedTransfer::RemoveMessage(NetworkMessage* message)
 {
-    for(std::list<NetworkMessage*>::iterator iter = fragments.begin(); iter != fragments.end(); ++iter)
+    for (std::list<NetworkMessage*>::iterator iter = fragments.begin(); iter != fragments.end(); ++iter)
         if (*iter == message)
         {
             message->transfer = 0;
             fragments.erase(iter);
-            KNET_LOG(LogVerbose, "Removing message with seqnum %d (fragnum %d) from transfer ID %d (%p).", (int)message->messageNumber, (int)message->fragmentIndex, id, this);
+            KNET_LOG(LogVerbose, "Removing message with seqnum %d (fragnum %d) from transfer ID %d (%p).",
+                (int)message->messageNumber, (int)message->fragmentIndex, id, this);
             return true;
         }
     return false;
 }
 
-FragmentedSendManager::FragmentedTransfer *FragmentedSendManager::AllocateNewFragmentedTransfer()
+FragmentedSendManager::FragmentedTransfer* FragmentedSendManager::AllocateNewFragmentedTransfer()
 {
     transfers.push_back(FragmentedTransfer());
-    FragmentedTransfer *transfer = &transfers.back();
+    FragmentedTransfer* transfer = &transfers.back();
     transfer->id = -1;
     transfer->totalNumFragments = 0;
 
@@ -56,23 +56,25 @@ FragmentedSendManager::FragmentedTransfer *FragmentedSendManager::AllocateNewFra
     return transfer;
 }
 
-void FragmentedSendManager::FreeFragmentedTransfer(FragmentedTransfer *transfer)
+void FragmentedSendManager::FreeFragmentedTransfer(FragmentedTransfer* transfer)
 {
     // Remove all references from any NetworkMessages to this structure.
-    for(std::list<NetworkMessage*>::iterator iter = transfer->fragments.begin(); iter != transfer->fragments.end(); ++iter)
+    for (std::list<NetworkMessage*>::iterator iter = transfer->fragments.begin(); iter != transfer->fragments.end();
+         ++iter)
         (*iter)->transfer = 0;
 
-    for(TransferList::iterator iter = transfers.begin(); iter != transfers.end(); ++iter)
+    for (TransferList::iterator iter = transfers.begin(); iter != transfers.end(); ++iter)
         if (&*iter == transfer)
         {
             transfers.erase(iter);
-            KNET_LOG(LogObjectAlloc, "Freed fragmented transfer ID=%d, numFragments: %d (%p).", transfer->id, (int)transfer->totalNumFragments, transfer);
+            KNET_LOG(LogObjectAlloc, "Freed fragmented transfer ID=%d, numFragments: %d (%p).", transfer->id,
+                (int)transfer->totalNumFragments, transfer);
             return;
         }
     KNET_LOG(LogError, "Tried to free a fragmented send struct that didn't exist!");
 }
 
-void FragmentedSendManager::RemoveMessage(FragmentedTransfer *transfer, NetworkMessage *message)
+void FragmentedSendManager::RemoveMessage(FragmentedTransfer* transfer, NetworkMessage* message)
 {
     bool success = transfer->RemoveMessage(message);
     if (!success)
@@ -85,20 +87,21 @@ void FragmentedSendManager::RemoveMessage(FragmentedTransfer *transfer, NetworkM
         FreeFragmentedTransfer(transfer);
 }
 
-bool FragmentedSendManager::AllocateFragmentedTransferID(FragmentedTransfer &transfer)
+bool FragmentedSendManager::AllocateFragmentedTransferID(FragmentedTransfer& transfer)
 {
-    assert(transfer.id == -1); // The FragmentedTransfer object must not have a previously allocated transfer ID at all.
+    assert(
+        transfer.id == -1);  // The FragmentedTransfer object must not have a previously allocated transfer ID at all.
 
-    // We start allocating the ID's from number 1, and the number 0 is never used, so that we get some redundancy in the protocol
-    // and are able to detect badly formed input.
+    // We start allocating the ID's from number 1, and the number 0 is never used, so that we get some redundancy in the
+    // protocol and are able to detect badly formed input.
     int transferID = 1;
 
     ///\todo Maintain a sorted order in Insert() instead of doing a search here - better for performance.
     bool used = true;
-    while(used)
+    while (used)
     {
         used = false;
-        for(TransferList::iterator iter = transfers.begin(); iter != transfers.end(); ++iter)
+        for (TransferList::iterator iter = transfers.begin(); iter != transfers.end(); ++iter)
         {
             if (iter->id == transferID)
             {
@@ -111,29 +114,33 @@ bool FragmentedSendManager::AllocateFragmentedTransferID(FragmentedTransfer &tra
         return false;
     transfer.id = transferID;
 
-    KNET_LOG(LogObjectAlloc, "Allocated a transferID %d to a transfer of %d fragments.", transfer.id, (int)transfer.totalNumFragments);
+    KNET_LOG(LogObjectAlloc, "Allocated a transferID %d to a transfer of %d fragments.", transfer.id,
+        (int)transfer.totalNumFragments);
 
     return true;
 }
 
 void FragmentedSendManager::FreeAllTransfers()
 {
-    while(!transfers.empty())
+    while (!transfers.empty())
         FreeFragmentedTransfer(&transfers.front());
 }
 
-void FragmentedReceiveManager::NewFragmentStartReceived(int transferID, int numTotalFragments, const char *data, size_t numBytes)
+void FragmentedReceiveManager::NewFragmentStartReceived(
+    int transferID, int numTotalFragments, const char* data, size_t numBytes)
 {
     assert(data);
-    KNET_LOG(LogVerbose, "Received a fragmentStart of size %db (#total fragments %d) for a transfer with ID %d.", (int)numBytes, numTotalFragments, transferID);
+    KNET_LOG(LogVerbose, "Received a fragmentStart of size %db (#total fragments %d) for a transfer with ID %d.",
+        (int)numBytes, numTotalFragments, transferID);
 
     if (numBytes == 0 || numTotalFragments <= 1)
     {
-        KNET_LOG(LogError, "Discarding degenerate fragmentStart of size %db and numTotalFragments=%db!", (int)numBytes, numTotalFragments);
+        KNET_LOG(LogError, "Discarding degenerate fragmentStart of size %db and numTotalFragments=%db!", (int)numBytes,
+            numTotalFragments);
         return;
     }
 
-    for(size_t i = 0; i < transfers.size(); ++i)
+    for (size_t i = 0; i < transfers.size(); ++i)
         if (transfers[i].transferID == transferID)
         {
             KNET_LOG(LogError, "An existing transfer with ID %d existed! Deleting it.", transferID);
@@ -142,7 +149,7 @@ void FragmentedReceiveManager::NewFragmentStartReceived(int transferID, int numT
         }
 
     transfers.push_back(ReceiveTransfer());
-    ReceiveTransfer &transfer = transfers.back();
+    ReceiveTransfer& transfer = transfers.back();
     transfer.transferID = transferID;
     transfer.numTotalFragments = numTotalFragments;
 
@@ -150,9 +157,11 @@ void FragmentedReceiveManager::NewFragmentStartReceived(int transferID, int numT
     NewFragmentReceived(transferID, 0, data, numBytes);
 }
 
-bool FragmentedReceiveManager::NewFragmentReceived(int transferID, int fragmentNumber, const char *data, size_t numBytes)
+bool FragmentedReceiveManager::NewFragmentReceived(
+    int transferID, int fragmentNumber, const char* data, size_t numBytes)
 {
-    KNET_LOG(LogVerbose, "Received a fragment of size %db (index %d) for a transfer with ID %d.", (int)numBytes, fragmentNumber, transferID);
+    KNET_LOG(LogVerbose, "Received a fragment of size %db (index %d) for a transfer with ID %d.", (int)numBytes,
+        fragmentNumber, transferID);
 
     if (numBytes == 0)
     {
@@ -160,47 +169,52 @@ bool FragmentedReceiveManager::NewFragmentReceived(int transferID, int fragmentN
         return false;
     }
 
-    for(size_t i = 0; i < transfers.size(); ++i)
+    for (size_t i = 0; i < transfers.size(); ++i)
         if (transfers[i].transferID == transferID)
         {
-            ReceiveTransfer &transfer = transfers[i];
+            ReceiveTransfer& transfer = transfers[i];
 
-            for(size_t j = 0; j < transfer.fragments.size(); ++j)
+            for (size_t j = 0; j < transfer.fragments.size(); ++j)
                 if (transfer.fragments[j].fragmentIndex == fragmentNumber)
                 {
-                    KNET_LOG(LogError, "A fragment with fragmentNumber %d already exists for transferID %d. Discarding the new fragment! Old size: %db, discarded size: %db",
+                    KNET_LOG(LogError,
+                        "A fragment with fragmentNumber %d already exists for transferID %d. Discarding the new "
+                        "fragment! Old size: %db, discarded size: %db",
                         fragmentNumber, transferID, (int)transfer.fragments[j].data.size(), (int)numBytes);
                     return false;
                 }
 
             transfer.fragments.push_back(ReceiveFragment());
-            ReceiveFragment &fragment = transfer.fragments.back();
+            ReceiveFragment& fragment = transfer.fragments.back();
             fragment.fragmentIndex = fragmentNumber;
             fragment.data.insert(fragment.data.end(), data, data + numBytes);
 
             if (transfer.fragments.size() >= (size_t)transfer.numTotalFragments)
             {
-                KNET_LOG(LogData, "Finished receiving a fragmented transfer that consisted of %d fragments (transferID=%d).",
+                KNET_LOG(LogData,
+                    "Finished receiving a fragmented transfer that consisted of %d fragments (transferID=%d).",
                     (int)transfer.fragments.size(), transfer.transferID);
                 return true;
             }
             else
                 return false;
         }
-    KNET_LOG(LogError, "Received a fragment of size %db (index %d) for a transfer with ID %d, but that transfer had not been initiated!",
+    KNET_LOG(LogError,
+        "Received a fragment of size %db (index %d) for a transfer with ID %d, but that transfer had not been "
+        "initiated!",
         (int)numBytes, fragmentNumber, transferID);
     return false;
 }
 
-void FragmentedReceiveManager::AssembleMessage(int transferID, std::vector<char> &assembledData)
+void FragmentedReceiveManager::AssembleMessage(int transferID, std::vector<char>& assembledData)
 {
-    for(size_t i = 0; i < transfers.size(); ++i)
+    for (size_t i = 0; i < transfers.size(); ++i)
         if (transfers[i].transferID == transferID)
         {
-            ReceiveTransfer &transfer = transfers[i];
+            ReceiveTransfer& transfer = transfers[i];
             size_t totalSize = 0;
 
-            for(size_t j = 0; j < transfer.fragments.size(); ++j)
+            for (size_t j = 0; j < transfer.fragments.size(); ++j)
                 totalSize += transfer.fragments[j].data.size();
 
             assembledData.resize(totalSize);
@@ -208,7 +222,7 @@ void FragmentedReceiveManager::AssembleMessage(int transferID, std::vector<char>
             ///\todo Sort by fragmentIndex.
 
             size_t offset = 0;
-            for(size_t j = 0; j < transfer.fragments.size(); ++j)
+            for (size_t j = 0; j < transfer.fragments.size(); ++j)
             {
                 assert(transfer.fragments[j].data.size() > 0);
                 memcpy(&assembledData[offset], &transfer.fragments[j].data[0], transfer.fragments[j].data.size());
@@ -220,7 +234,7 @@ void FragmentedReceiveManager::AssembleMessage(int transferID, std::vector<char>
 
 void FragmentedReceiveManager::FreeMessage(int transferID)
 {
-    for(size_t i = 0; i < transfers.size(); ++i)
+    for (size_t i = 0; i < transfers.size(); ++i)
         if (transfers[i].transferID == transferID)
         {
             transfers.erase(transfers.begin() + i);
@@ -228,4 +242,4 @@ void FragmentedReceiveManager::FreeMessage(int transferID)
         }
 }
 
-} // ~kNet
+}  // ~kNet

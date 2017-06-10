@@ -3,7 +3,7 @@
 // Author(s):       kNet Authors <https://github.com/juj/kNet>
 //                  iFarbod <>
 //
-// Copyright (c) 2015-2017 CtNorth Team
+// Copyright (c) 2015-2017 Project CTNorth
 //
 // Distributed under the MIT license (See accompanying file LICENSE or copy at
 // https://opensource.org/licenses/MIT)
@@ -16,14 +16,15 @@
 #include <map>
 #include <string>
 
-#include "kNet/WaitFreeQueue.hpp"
 #include "kNet/Clock.hpp"
+#include "kNet/WaitFreeQueue.hpp"
 
 // This macro is used inside MessageConnection and NetworkServer objects, which have the 'owner' member.
 static const int cEventOldAgeMSecs = 30 * 1000;
 
 #ifdef KNET_NETWORK_PROFILING
-#define ADDEVENT(name, value, valueType) (owner ? owner->Statistics()->AddEventToHierarchy((name), (value), (valueType), cEventOldAgeMSecs) : ((void)0))
+#define ADDEVENT(name, value, valueType) \
+    (owner ? owner->Statistics()->AddEventToHierarchy((name), (value), (valueType), cEventOldAgeMSecs) : ((void)0))
 #else
 #define ADDEVENT(name, value, valueType) ((void)0)
 #endif
@@ -37,22 +38,23 @@ struct StatsEvent
     tick_t time;
 };
 
-inline std::string FirstToken(const char *str, char delimiter, int &nextTokenStart)
+inline std::string FirstToken(const char* str, char delimiter, int& nextTokenStart)
 {
     int i = 0;
-    while(str[i] != '\0' && str[i] != delimiter)
+    while (str[i] != '\0' && str[i] != delimiter)
         ++i;
-    if (str[i] == '\0' || str[i+1] == delimiter)
+    if (str[i] == '\0' || str[i + 1] == delimiter)
         nextTokenStart = -1;
     else
-        nextTokenStart = i+1;
+        nextTokenStart = i + 1;
     return std::string(str, str + i);
 }
 
 class StatsEventHierarchyNode
 {
 public:
-    ///\todo To improve performance, don't use a std::string as a key to the map, and replace the map with a more efficient data structure.
+    ///\todo To improve performance, don't use a std::string as a key to the map, and replace the map with a more
+    ///efficient data structure.
     typedef std::map<std::string, StatsEventHierarchyNode> NodeMap;
     NodeMap children;
 
@@ -61,8 +63,7 @@ public:
     /// Specifies the unit of the numeric data in this node.
     std::string valueType;
 
-    StatsEventHierarchyNode()
-    :events(4) // The default size for the queue must be at least four elements (pow2, >2).
+    StatsEventHierarchyNode() : events(4)  // The default size for the queue must be at least four elements (pow2, >2).
     {
     }
 
@@ -70,13 +71,14 @@ public:
     {
         assert(ageMSecs >= 0);
         tick_t tooOldMessageTime = Clock::Tick() - (tick_t)ageMSecs * Clock::TicksPerSec() / 1000;
-        while(events.Size() > 0)
+        while (events.Size() > 0)
         {
-            StatsEvent *front = events.Front();
+            StatsEvent* front = events.Front();
             if (Clock::IsNewer(tooOldMessageTime, front->time))
                 events.PopFront();
             else
-                break; // The items are added to the queue in their time order, so if the oldest item is newer than our limit, they all are.
+                break;  // The items are added to the queue in their time order, so if the oldest item is newer than our
+                        // limit, they all are.
         }
     }
 
@@ -84,7 +86,7 @@ public:
     {
         PruneOldEventsThisLevel(ageMSecs);
 
-        for(NodeMap::iterator iter = children.begin(); iter != children.end(); ++iter)
+        for (NodeMap::iterator iter = children.begin(); iter != children.end(); ++iter)
             iter->second.PruneOldEventsHierarchy(ageMSecs);
     }
 
@@ -98,9 +100,10 @@ public:
             events.InsertWithResize(e);
     }
 
-    ///\ @param name The event track in the profiler hierachy to add the event to, e.g. "connection.messageIn.myMessageName". This
+    ///\ @param name The event track in the profiler hierachy to add the event to, e.g.
+    ///"connection.messageIn.myMessageName". This
     ///              string may not contain two consecutive periods, e.g. "a..b".
-    void AddEventToHierarchy(const char *name, float value, const char *valueType, int oldAgeMSecs)
+    void AddEventToHierarchy(const char* name, float value, const char* valueType, int oldAgeMSecs)
     {
         int nextTokenStart = 0;
         std::string childName = FirstToken(name, '.', nextTokenStart);
@@ -110,7 +113,8 @@ public:
         {
             NodeMap::iterator iter = children.find(childName);
             if (iter == children.end())
-                children[childName].valueType = valueType; // To optimize, only copy this field in the first time the node is created.
+                children[childName].valueType =
+                    valueType;  // To optimize, only copy this field in the first time the node is created.
             if (nextTokenStart == -1)
                 children[childName].AddEventToThisLevel(value, oldAgeMSecs);
             else
@@ -118,7 +122,7 @@ public:
         }
     }
 
-    StatsEventHierarchyNode *FindChild(const char *name)
+    StatsEventHierarchyNode* FindChild(const char* name)
     {
         int nextTokenStart = 0;
         std::string childName = FirstToken(name, '.', nextTokenStart);
@@ -136,16 +140,13 @@ public:
         }
     }
 
-    int AccumulateTotalCountThisLevel() const
-    {
-        return events.Size();
-    }
+    int AccumulateTotalCountThisLevel() const { return events.Size(); }
 
     int AccumulateTotalCountHierarchy() const
     {
         int count = AccumulateTotalCountThisLevel();
 
-        for(NodeMap::const_iterator iter = children.begin(); iter != children.end(); ++iter)
+        for (NodeMap::const_iterator iter = children.begin(); iter != children.end(); ++iter)
             count += iter->second.AccumulateTotalCountHierarchy();
 
         return count;
@@ -154,7 +155,7 @@ public:
     float AccumulateTotalValueThisLevel() const
     {
         float value = 0.f;
-        for(int i = 0; i < events.Size(); ++i)
+        for (int i = 0; i < events.Size(); ++i)
             value += events.ItemAt(i)->value;
         return value;
     }
@@ -163,7 +164,7 @@ public:
     {
         float value = AccumulateTotalValueThisLevel();
 
-        for(NodeMap::const_iterator iter = children.begin(); iter != children.end(); ++iter)
+        for (NodeMap::const_iterator iter = children.begin(); iter != children.end(); ++iter)
             value += iter->second.AccumulateTotalValueHierarchy();
 
         return value;
@@ -178,4 +179,4 @@ public:
     }
 };
 
-} // ~kNet
+}  // ~kNet

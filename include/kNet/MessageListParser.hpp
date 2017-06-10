@@ -3,7 +3,7 @@
 // Author(s):       kNet Authors <https://github.com/juj/kNet>
 //                  iFarbod <>
 //
-// Copyright (c) 2015-2017 CtNorth Team
+// Copyright (c) 2015-2017 Project CTNorth
 //
 // Distributed under the MIT license (See accompanying file LICENSE or copy at
 // https://opensource.org/licenses/MIT)
@@ -51,15 +51,15 @@ struct SerializedElementDesc
     std::vector<SerializedElementDesc*> elements;
 
     /// The parent element, or 0 if this is the root element.
-    SerializedElementDesc *parent;
+    SerializedElementDesc* parent;
 };
 
 /// Describes a whole serialized message.
 struct SerializedMessageDesc
 {
-    /// This is a weak pointer to the root element of this message description. The memory is owned by the SerializedMessageList
-    /// where this SerializedMessageDesc belongs to.
-    SerializedElementDesc *data;
+    /// This is a weak pointer to the root element of this message description. The memory is owned by the
+    /// SerializedMessageList where this SerializedMessageDesc belongs to.
+    SerializedElementDesc* data;
     std::string name;
     u32 id;
     bool reliable;
@@ -72,27 +72,27 @@ class SerializedMessageList
 {
 public:
     /// Loads a set of message templates from a protocol .xml file.
-    void LoadMessagesFromFile(const char *filename);
+    void LoadMessagesFromFile(const char* filename);
 
     /// Returns a message template associated with the given id, or 0 if no such message exists.
-    const SerializedMessageDesc *FindMessageByID(u32 id);
+    const SerializedMessageDesc* FindMessageByID(u32 id);
     /// Returns a message template associated with the given name, or 0 if no such message exists.
-    const SerializedMessageDesc *FindMessageByName(const char *name);
+    const SerializedMessageDesc* FindMessageByName(const char* name);
 
     /// Returns the whole list of messages.
-    const std::list<SerializedMessageDesc> &GetMessages() const { return messages; }
+    const std::list<SerializedMessageDesc>& GetMessages() const { return messages; }
 
     /// Returns a flat list of all the message elements.
-    const std::list<SerializedElementDesc> &GetElements() const { return elements; }
+    const std::list<SerializedElementDesc>& GetElements() const { return elements; }
 
 private:
     std::list<SerializedElementDesc> elements;
     std::list<SerializedMessageDesc> messages;
 
-    SerializedElementDesc *ParseNode(TiXmlElement *node, SerializedElementDesc *parentNode);
+    SerializedElementDesc* ParseNode(TiXmlElement* node, SerializedElementDesc* parentNode);
 
-    void ParseMessages(TiXmlElement *root);
-    void ParseStructs(TiXmlElement *root);
+    void ParseMessages(TiXmlElement* root);
+    void ParseStructs(TiXmlElement* root);
 };
 
-} // ~kNet
+}  // ~kNet

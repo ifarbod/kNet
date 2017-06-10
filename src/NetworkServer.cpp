@@ -3,7 +3,7 @@
 // Author(s):       kNet Authors <https://github.com/juj/kNet>
 //                  iFarbod <>
 //
-// Copyright (c) 2015-2017 CtNorth Team
+// Copyright (c) 2015-2017 Project CTNorth
 //
 // Distributed under the MIT license (See accompanying file LICENSE or copy at
 // https://opensource.org/licenses/MIT)
@@ -16,14 +16,14 @@
 #endif
 #include "kNet/DebugMemoryLeakCheck.hpp"
 
+#include "kNet/Clock.hpp"
+#include "kNet/Datagram.hpp"
 #include "kNet/Network.hpp"
+#include "kNet/NetworkLogging.hpp"
 #include "kNet/NetworkServer.hpp"
+#include "kNet/NetworkWorkerThread.hpp"
 #include "kNet/TCPMessageConnection.hpp"
 #include "kNet/UDPMessageConnection.hpp"
-#include "kNet/Datagram.hpp"
-#include "kNet/NetworkWorkerThread.hpp"
-#include "kNet/NetworkLogging.hpp"
-#include "kNet/Clock.hpp"
 
 #include <iostream>
 #include <sstream>
@@ -31,16 +31,16 @@
 namespace kNet
 {
 
-NetworkServer::NetworkServer(Network *owner_, std::vector<Socket *> listenSockets_)
-:listenSockets(listenSockets_),
-owner(owner_),
-workerThread(0),
+NetworkServer::NetworkServer(Network* owner_, std::vector<Socket*> listenSockets_)
+    : listenSockets(listenSockets_),
+      owner(owner_),
+      workerThread(0),
 #ifdef KNET_THREAD_CHECKING_ENABLED
-workerThreadId(Thread::NullThreadId()),
+      workerThreadId(Thread::NullThreadId()),
 #endif
-acceptNewConnections(true),
-networkServerListener(0),
-udpConnectionAttempts(64)
+      acceptNewConnections(true),
+      networkServerListener(0),
+      udpConnectionAttempts(64)
 {
     assert(owner);
     assert(!listenSockets.empty());
@@ -52,7 +52,7 @@ NetworkServer::~NetworkServer()
     CloseSockets();
 }
 
-void NetworkServer::RegisterServerListener(INetworkServerListener *listener)
+void NetworkServer::RegisterServerListener(INetworkServerListener* listener)
 {
     networkServerListener = listener;
 }
@@ -62,7 +62,7 @@ void NetworkServer::SetAcceptNewConnections(bool acceptNewConnections_)
     acceptNewConnections = acceptNewConnections_;
 }
 
-void NetworkServer::SetWorkerThread(NetworkWorkerThread *thread) // [main thread]
+void NetworkServer::SetWorkerThread(NetworkWorkerThread* thread)  // [main thread]
 {
     workerThread = thread;
 #ifdef KNET_THREAD_CHECKING_ENABLED
@@ -77,14 +77,14 @@ void NetworkServer::CloseSockets()
 
     acceptNewConnections = false;
 
-    for(size_t i = 0; i < listenSockets.size(); ++i)
+    for (size_t i = 0; i < listenSockets.size(); ++i)
         owner->DeleteSocket(listenSockets[i]);
 
     // Now forget all sockets - not getting them back in any way.
     listenSockets.clear();
 }
 
-Socket *NetworkServer::AcceptConnections(Socket *listenSocket)
+Socket* NetworkServer::AcceptConnections(Socket* listenSocket)
 {
     if (!listenSocket || !listenSocket->Connected())
         return 0;
@@ -92,14 +92,15 @@ Socket *NetworkServer::AcceptConnections(Socket *listenSocket)
     sockaddr_in remoteAddress;
     memset(&remoteAddress, 0, sizeof(remoteAddress));
     socklen_t remoteAddressLen = sizeof(remoteAddress);
-    SOCKET &listenSock = listenSocket->GetSocketHandle();
+    SOCKET& listenSock = listenSocket->GetSocketHandle();
     SOCKET acceptSocket = accept(listenSock, (sockaddr*)&remoteAddress, &remoteAddressLen);
     if (acceptSocket == KNET_ACCEPT_FAILURE)
     {
         int error = Network::GetLastError();
         if (error != KNET_EWOULDBLOCK)
         {
-            KNET_LOG(LogError, "NetworkServer::AcceptConnections: accept failed: %s", Network::GetErrorString(error).c_str());
+            KNET_LOG(LogError, "NetworkServer::AcceptConnections: accept failed: %s",
+                Network::GetErrorString(error).c_str());
             closesocket(listenSock);
             listenSock = INVALID_SOCKET;
         }
@@ -114,14 +115,16 @@ Socket *NetworkServer::AcceptConnections(Socket *listenSocket)
     EndPoint localEndPoint;
     sockaddr_in localSockAddr;
     socklen_t namelen = sizeof(localSockAddr);
-    int sockRet = getsockname(acceptSocket, (sockaddr*)&localSockAddr, &namelen); // Note: This works only if family==INETv4
+    int sockRet =
+        getsockname(acceptSocket, (sockaddr*)&localSockAddr, &namelen);  // Note: This works only if family==INETv4
     if (sockRet != 0)
         KNET_LOG(LogError, "getsockname failed!");
     localEndPoint = EndPoint::FromSockAddrIn(localSockAddr);
     std::string localHostName = owner->LocalAddress();
 
     const size_t maxTcpSendSize = 65536;
-    Socket *socket = owner->StoreSocket(Socket(acceptSocket, localEndPoint, localHostName.c_str(), remoteEndPoint, remoteHostName.c_str(), SocketOverTCP, ServerClientSocket, maxTcpSendSize));
+    Socket* socket = owner->StoreSocket(Socket(acceptSocket, localEndPoint, localHostName.c_str(), remoteEndPoint,
+        remoteHostName.c_str(), SocketOverTCP, ServerClientSocket, maxTcpSendSize));
     socket->SetBlocking(false);
 
     return socket;
@@ -129,12 +132,13 @@ Socket *NetworkServer::AcceptConnections(Socket *listenSocket)
 
 void NetworkServer::CleanupDeadConnections()
 {
-    // When we acquire the list of client connections, don't hold on to it for long, so that the worker thread can properly detach from it.
+    // When we acquire the list of client connections, don't hold on to it for long, so that the worker thread can
+    // properly detach from it.
     ConnectionMap clientsMap = *clients.Acquire();
 
     // Clean up all disconnected/timed out connections.
     ConnectionMap::iterator iter = clientsMap.begin();
-    while(iter != clientsMap.end())
+    while (iter != clientsMap.end())
     {
         ConnectionMap::iterator next = iter;
         ++next;
@@ -159,14 +163,14 @@ void NetworkServer::Process()
 {
     CleanupDeadConnections();
 
-    for(size_t i = 0; i < listenSockets.size(); ++i)
+    for (size_t i = 0; i < listenSockets.size(); ++i)
     {
-        Socket *listen = listenSockets[i];
+        Socket* listen = listenSockets[i];
 
         if (listen->TransportLayer() == SocketOverTCP)
         {
             // Accept the first inbound connection.
-            Socket *client = AcceptConnections(listen);
+            Socket* client = AcceptConnections(listen);
             if (client)
             {
                 if (!client->Connected())
@@ -187,7 +191,8 @@ void NetworkServer::Process()
                     PolledTimer timer;
                     Lockable<ConnectionMap>::LockType clientsLock = clients.Acquire();
                     (*clientsLock)[clientConnection->RemoteEndPoint()] = clientConnection;
-                    KNET_LOG(LogWaits, "NetworkServer::Process: Adding new accepted TCP connection to connection list took %f msecs.",
+                    KNET_LOG(LogWaits,
+                        "NetworkServer::Process: Adding new accepted TCP connection to connection list took %f msecs.",
                         timer.MSecsElapsed());
                 }
 
@@ -200,50 +205,53 @@ void NetworkServer::Process()
     // pending new connections, they will only get accepted at a rate of one per each frame.
 
     // Process a new UDP connection attempt.
-    ConnectionAttemptDescriptor *desc = udpConnectionAttempts.Front();
+    ConnectionAttemptDescriptor* desc = udpConnectionAttempts.Front();
     if (desc)
     {
-        ProcessNewUDPConnectionAttempt(desc->listenSocket, desc->peer, (const char *)desc->data.data, desc->data.size);
+        ProcessNewUDPConnectionAttempt(desc->listenSocket, desc->peer, (const char*)desc->data.data, desc->data.size);
         udpConnectionAttempts.PopFront();
     }
 
     // Process all new inbound data for each connection handled by this server.
     ConnectionMap clientMap = *clients.Acquire();
-    for(ConnectionMap::iterator iter = clientMap.begin(); iter != clientMap.end(); ++iter)
+    for (ConnectionMap::iterator iter = clientMap.begin(); iter != clientMap.end(); ++iter)
         iter->second->Process();
 }
 
-void NetworkServer::ReadUDPSocketData(Socket *listenSocket) // [worker thread]
+void NetworkServer::ReadUDPSocketData(Socket* listenSocket)  // [worker thread]
 {
     using namespace std;
 
     assert(listenSocket);
 
-    OverlappedTransferBuffer *recvData = listenSocket->BeginReceive();
+    OverlappedTransferBuffer* recvData = listenSocket->BeginReceive();
     if (!recvData)
-        return; // No datagram available, return.
+        return;  // No datagram available, return.
     if (recvData->bytesContains == 0)
     {
         listenSocket->EndReceive(recvData);
         KNET_LOG(LogError, "Received 0 bytes of data in NetworkServer::ReadUDPSocketData!");
         return;
     }
-    EndPoint endPoint = EndPoint::FromSockAddrIn(recvData->from); // This conversion is quite silly, perhaps it could be removed to gain performance?
-    KNET_LOG(LogData, "Received a datagram of size %d to socket %s from endPoint %s.", recvData->bytesContains, listenSocket->ToString().c_str(),
-        endPoint.ToString().c_str());
+    EndPoint endPoint = EndPoint::FromSockAddrIn(
+        recvData->from);  // This conversion is quite silly, perhaps it could be removed to gain performance?
+    KNET_LOG(LogData, "Received a datagram of size %d to socket %s from endPoint %s.", recvData->bytesContains,
+        listenSocket->ToString().c_str(), endPoint.ToString().c_str());
 
     PolledTimer timer;
-    MessageConnection *receiverConnection = 0;
+    MessageConnection* receiverConnection = 0;
 
     {
         Lockable<ConnectionMap>::LockType clientsLock = clients.Acquire();
         if (timer.MSecsElapsed() > 50.f)
         {
-            KNET_LOG(LogWaits, "NetworkServer::ReadUDPSocketData: Accessing the connection list in UDP server receive code took %f msecs.",
-            timer.MSecsElapsed());
+            KNET_LOG(LogWaits,
+                "NetworkServer::ReadUDPSocketData: Accessing the connection list in UDP server receive code took %f "
+                "msecs.",
+                timer.MSecsElapsed());
         }
 
-        ConnectionMap::iterator iter = clientsLock->find(endPoint); ///\todo HashTable for performance.
+        ConnectionMap::iterator iter = clientsLock->find(endPoint);  ///\todo HashTable for performance.
         if (iter != clientsLock->end())
             receiverConnection = iter->second;
     }
@@ -251,7 +259,7 @@ void NetworkServer::ReadUDPSocketData(Socket *listenSocket) // [worker thread]
     if (receiverConnection)
     {
         // If the datagram came from a known endpoint, pass it to the connection object that handles that endpoint.
-        UDPMessageConnection *udpConnection = dynamic_cast<UDPMessageConnection *>(receiverConnection);
+        UDPMessageConnection* udpConnection = dynamic_cast<UDPMessageConnection*>(receiverConnection);
         if (udpConnection)
             udpConnection->QueueInboundDatagram(recvData->buffer.buf, recvData->bytesContains);
         else
@@ -265,7 +273,8 @@ void NetworkServer::ReadUDPSocketData(Socket *listenSocket) // [worker thread]
     listenSocket->EndReceive(recvData);
 }
 
-void NetworkServer::EnqueueNewUDPConnectionAttempt(Socket *listenSocket, const EndPoint &endPoint, const char *data, size_t numBytes)
+void NetworkServer::EnqueueNewUDPConnectionAttempt(
+    Socket* listenSocket, const EndPoint& endPoint, const char* data, size_t numBytes)
 {
     ConnectionAttemptDescriptor desc;
     desc.data.size = std::min<int>(cDatagramBufferSize, numBytes);
@@ -283,9 +292,11 @@ void NetworkServer::EnqueueNewUDPConnectionAttempt(Socket *listenSocket, const E
         KNET_LOG(LogInfo, "Queued new connection attempt from %s.", endPoint.ToString().c_str());
 }
 
-bool NetworkServer::ProcessNewUDPConnectionAttempt(Socket *listenSocket, const EndPoint &endPoint, const char *data, size_t numBytes)
+bool NetworkServer::ProcessNewUDPConnectionAttempt(
+    Socket* listenSocket, const EndPoint& endPoint, const char* data, size_t numBytes)
 {
-    KNET_LOG(LogInfo, "New inbound connection attempt from %s with datagram of size %d.", endPoint.ToString().c_str(), (int)numBytes);
+    KNET_LOG(LogInfo, "New inbound connection attempt from %s with datagram of size %d.", endPoint.ToString().c_str(),
+        (int)numBytes);
     if (!acceptNewConnections)
     {
         KNET_LOG(LogError, "Ignored a new connection attempt since server is set not to accept new connections.");
@@ -309,14 +320,14 @@ bool NetworkServer::ProcessNewUDPConnectionAttempt(Socket *listenSocket, const E
     std::string remoteHostName = endPoint.IPToString();
 
     // Accept the connection and create a new UDP socket that communicates to that endpoint.
-    Socket *socket = owner->CreateUDPSlaveSocket(listenSocket, endPoint, remoteHostName.c_str());
+    Socket* socket = owner->CreateUDPSlaveSocket(listenSocket, endPoint, remoteHostName.c_str());
     if (!socket)
     {
         KNET_LOG(LogError, "Network::ConnectUDP failed! Cannot accept new UDP connection.");
         return false;
     }
 
-    UDPMessageConnection *udpConnection = new UDPMessageConnection(owner, this, socket, ConnectionOK);
+    UDPMessageConnection* udpConnection = new UDPMessageConnection(owner, this, socket, ConnectionOK);
     Ptr(MessageConnection) connection(udpConnection);
     {
         PolledTimer timer;
@@ -324,11 +335,13 @@ bool NetworkServer::ProcessNewUDPConnectionAttempt(Socket *listenSocket, const E
         if (clientsLock->find(endPoint) == clientsLock->end())
             (*clientsLock)[endPoint] = connection;
         else
-            KNET_LOG(LogError, "NetworkServer::ProcessNewUDPConnectionAttempt: Trying to overwrite an old connection with a new one! Discarding connection attempt datagram!",
+            KNET_LOG(LogError,
+                "NetworkServer::ProcessNewUDPConnectionAttempt: Trying to overwrite an old connection with a new one! "
+                "Discarding connection attempt datagram!",
                 timer.MSecsElapsed());
 
-
-        KNET_LOG(LogWaits, "NetworkServer::ProcessNewUDPConnectionAttempt: Accessing the connection list took %f msecs.",
+        KNET_LOG(LogWaits,
+            "NetworkServer::ProcessNewUDPConnectionAttempt: Accessing the connection list took %f msecs.",
             timer.MSecsElapsed());
     }
 
@@ -346,7 +359,7 @@ bool NetworkServer::ProcessNewUDPConnectionAttempt(Socket *listenSocket, const E
     return true;
 }
 
-void NetworkServer::BroadcastMessage(const NetworkMessage &msg, MessageConnection *exclude)
+void NetworkServer::BroadcastMessage(const NetworkMessage& msg, MessageConnection* exclude)
 {
     PolledTimer timer;
     Lockable<ConnectionMap>::LockType clientsLock = clients.Acquire();
@@ -356,9 +369,9 @@ void NetworkServer::BroadcastMessage(const NetworkMessage &msg, MessageConnectio
             timer.MSecsElapsed());
     }
 
-    for(ConnectionMap::iterator iter = clientsLock->begin(); iter != clientsLock->end(); ++iter)
+    for (ConnectionMap::iterator iter = clientsLock->begin(); iter != clientsLock->end(); ++iter)
     {
-        MessageConnection *connection = iter->second;
+        MessageConnection* connection = iter->second;
         if (connection == exclude)
             continue;
 
@@ -367,8 +380,7 @@ void NetworkServer::BroadcastMessage(const NetworkMessage &msg, MessageConnectio
 }
 
 void NetworkServer::BroadcastMessage(unsigned long id, bool reliable, bool inOrder, unsigned long priority,
-                                     unsigned long contentID, const char *data, size_t numBytes,
-                                     MessageConnection *exclude)
+    unsigned long contentID, const char* data, size_t numBytes, MessageConnection* exclude)
 {
     PolledTimer timer;
     Lockable<ConnectionMap>::LockType clientsLock = clients.Acquire();
@@ -378,14 +390,14 @@ void NetworkServer::BroadcastMessage(unsigned long id, bool reliable, bool inOrd
             timer.MSecsElapsed());
     }
 
-    for(ConnectionMap::iterator iter = clientsLock->begin(); iter != clientsLock->end(); ++iter)
+    for (ConnectionMap::iterator iter = clientsLock->begin(); iter != clientsLock->end(); ++iter)
     {
-        MessageConnection *connection = iter->second;
+        MessageConnection* connection = iter->second;
         assert(connection);
         if (connection == exclude || !connection->IsWriteOpen())
             continue;
 
-        NetworkMessage *msg = connection->StartNewMessage(id, numBytes);
+        NetworkMessage* msg = connection->StartNewMessage(id, numBytes);
         msg->reliable = reliable;
         msg->inOrder = inOrder;
         msg->priority = priority;
@@ -397,12 +409,12 @@ void NetworkServer::BroadcastMessage(unsigned long id, bool reliable, bool inOrd
     }
 }
 
-void NetworkServer::SendMessage(const NetworkMessage &msg, MessageConnection &destination)
+void NetworkServer::SendMessage(const NetworkMessage& msg, MessageConnection& destination)
 {
     if (!destination.IsWriteOpen())
         return;
 
-    NetworkMessage *cloned = destination.StartNewMessage(msg.id);
+    NetworkMessage* cloned = destination.StartNewMessage(msg.id);
     *cloned = msg;
     destination.EndAndQueueMessage(cloned);
 }
@@ -416,8 +428,8 @@ void NetworkServer::DisconnectAllClients()
     KNET_LOG(LogWaits, "NetworkServer::DisconnectAllClients: Accessing the connection list took %f msecs.",
         timer.MSecsElapsed());
 
-    for(ConnectionMap::iterator iter = clientsLock->begin(); iter != clientsLock->end(); ++iter)
-        iter->second->Disconnect(0); // Do not wait for any client.
+    for (ConnectionMap::iterator iter = clientsLock->begin(); iter != clientsLock->end(); ++iter)
+        iter->second->Disconnect(0);  // Do not wait for any client.
 }
 
 void NetworkServer::Close(int disconnectWaitMilliseconds)
@@ -429,16 +441,16 @@ void NetworkServer::Close(int disconnectWaitMilliseconds)
     if (GetConnections().size() > 0)
     {
         Clock::Sleep(disconnectWaitMilliseconds);
-        KNET_LOG(LogVerbose, "NetworkServer::Close: Waited a fixed period of %d msecs for all connections to disconnect.",
+        KNET_LOG(LogVerbose,
+            "NetworkServer::Close: Waited a fixed period of %d msecs for all connections to disconnect.",
             disconnectWaitMilliseconds);
     }
 
     PolledTimer timer;
     Lockable<ConnectionMap>::LockType clientsLock = clients.Acquire();
-    KNET_LOG(LogWaits, "NetworkServer::Close: Accessing the connection list took %f msecs.",
-        timer.MSecsElapsed());
-    for(ConnectionMap::iterator iter = clientsLock->begin(); iter != clientsLock->end(); ++iter)
-        iter->second->Close(0); // Do not wait for any client.
+    KNET_LOG(LogWaits, "NetworkServer::Close: Accessing the connection list took %f msecs.", timer.MSecsElapsed());
+    for (ConnectionMap::iterator iter = clientsLock->begin(); iter != clientsLock->end(); ++iter)
+        iter->second->Close(0);  // Do not wait for any client.
 }
 
 void NetworkServer::RunModalServer()
@@ -446,7 +458,7 @@ void NetworkServer::RunModalServer()
     assert(this);
 
     ///\todo Loop until StopModalServer() is called.
-    for(;;)
+    for (;;)
     {
         Process();
 
@@ -455,13 +467,13 @@ void NetworkServer::RunModalServer()
     }
 }
 
-void NetworkServer::ConnectionClosed(MessageConnection *connection)
+void NetworkServer::ConnectionClosed(MessageConnection* connection)
 {
     PolledTimer timer;
     Lockable<ConnectionMap>::LockType clientsLock = clients.Acquire();
     KNET_LOG(LogWaits, "NetworkServer::ConnectionClosed: Accessing the connection list took %f msecs.",
         timer.MSecsElapsed());
-    for(ConnectionMap::iterator iter = clientsLock->begin(); iter != clientsLock->end(); ++iter)
+    for (ConnectionMap::iterator iter = clientsLock->begin(); iter != clientsLock->end(); ++iter)
         if (iter->second == connection)
         {
             if (networkServerListener)
@@ -481,7 +493,7 @@ void NetworkServer::ConnectionClosed(MessageConnection *connection)
     KNET_LOG(LogError, "Unknown MessageConnection passed to NetworkServer::Disconnect!");
 }
 
-std::vector<Socket *> &NetworkServer::ListenSockets()
+std::vector<Socket*>& NetworkServer::ListenSockets()
 {
     return listenSockets;
 }
@@ -502,9 +514,9 @@ int NetworkServer::NumConnections() const
 {
     int numConnections = 0;
     Lockable<ConnectionMap>::ConstLockType lock = clients.Acquire();
-    for(ConnectionMap::const_iterator iter = lock->begin(); iter != lock->end(); ++iter)
+    for (ConnectionMap::const_iterator iter = lock->begin(); iter != lock->end(); ++iter)
     {
-        const MessageConnection *connection = iter->second.ptr();
+        const MessageConnection* connection = iter->second.ptr();
         if (connection && (connection->IsPending() || connection->IsReadOpen() || connection->IsWriteOpen()))
             ++numConnections;
     }
@@ -515,7 +527,7 @@ std::string NetworkServer::ToString() const
 {
     bool isUdp = false;
     bool isTcp = false;
-    for(size_t i = 0; i < listenSockets.size(); ++i)
+    for (size_t i = 0; i < listenSockets.size(); ++i)
         if (listenSockets[i]->TransportLayer() == SocketOverUDP)
             isUdp = true;
         else
@@ -528,7 +540,8 @@ std::string NetworkServer::ToString() const
         ss << "UDP server";
     else if (isTcp)
         ss << "TCP server";
-    else ss << "Server (no listen sockets open)";
+    else
+        ss << "Server (no listen sockets open)";
 
     if (listenSockets.size() == 1)
     {
@@ -538,7 +551,7 @@ std::string NetworkServer::ToString() const
     else if (listenSockets.size() > 1)
     {
         ss << " (" << (int)listenSockets.size() << " listen sockets at local ports ";
-        for(size_t i = 0; i < listenSockets.size() && i < 3; ++i)
+        for (size_t i = 0; i < listenSockets.size() && i < 3; ++i)
         {
             if (i > 0)
                 ss << ", ";
@@ -565,4 +578,4 @@ std::string NetworkServer::ToString() const
     return ss.str();
 }
 
-} // ~kNet
+}  // ~kNet

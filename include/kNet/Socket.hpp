@@ -3,7 +3,7 @@
 // Author(s):       kNet Authors <https://github.com/juj/kNet>
 //                  iFarbod <>
 //
-// Copyright (c) 2015-2017 CtNorth Team
+// Copyright (c) 2015-2017 Project CTNorth
 //
 // Distributed under the MIT license (See accompanying file LICENSE or copy at
 // https://opensource.org/licenses/MIT)
@@ -14,7 +14,6 @@
     @brief The Socket class. */
 
 #ifdef _WIN32
-
 
 #include "win32/WS2Include.hpp"
 #define KNET_EWOULDBLOCK WSAEWOULDBLOCK
@@ -28,11 +27,11 @@ typedef int socklen_t;
 
 #else
 
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netdb.h>
 #include <errno.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 
 #define INVALID_SOCKET ((SOCKET)0)
 #define KNET_SOCKET_ERROR ((SOCKET)-1)
@@ -50,13 +49,13 @@ typedef int SOCKET;
 }
 #endif
 
-#include <vector>
 #include <list>
+#include <vector>
 
-#include "SharedPtr.hpp"
 #include "EndPoint.hpp"
-#include "WaitFreeQueue.hpp"
 #include "Event.hpp"
+#include "SharedPtr.hpp"
+#include "WaitFreeQueue.hpp"
 
 namespace kNet
 {
@@ -64,7 +63,7 @@ namespace kNet
 /// Identifiers for the possible bottom-level tranport layers.
 enum SocketTransportLayer
 {
-    InvalidTransportLayer = 0, ///< A default invalid value for uninitialized sockets.
+    InvalidTransportLayer = 0,  ///< A default invalid value for uninitialized sockets.
     SocketOverUDP,
     SocketOverTCP
 };
@@ -75,14 +74,16 @@ std::string SocketTransportLayerToString(SocketTransportLayer transport);
 /// "tcp" & "socketovertcp" -> SocketOverTCP.
 /// "udp" & "socketoverudp" -> SocketOverUDP.
 /// Other strings -> InvalidTransportLayer.
-SocketTransportLayer StringToSocketTransportLayer(const char *str);
+SocketTransportLayer StringToSocketTransportLayer(const char* str);
 
 enum SocketType
 {
-    InvalidSocketType = 0, ///< A default invalid value for uninitialized sockets.
-    ServerListenSocket, ///< For TCP: a listen socket. For UDP: the single master socket handle that is used to send & receive all data.
-    ServerClientSocket, ///< For TCP: a client data socket. For UDP: a slave-mode Socket object that shares the underlying socket handle with the UDP master Socket.
-    ClientSocket ///< A client-side socket.
+    InvalidSocketType = 0,  ///< A default invalid value for uninitialized sockets.
+    ServerListenSocket,     ///< For TCP: a listen socket. For UDP: the single master socket handle that is used to send &
+                            ///receive all data.
+    ServerClientSocket,     ///< For TCP: a client data socket. For UDP: a slave-mode Socket object that shares the
+                            ///underlying socket handle with the UDP master Socket.
+    ClientSocket            ///< A client-side socket.
 };
 
 std::string SocketTypeToString(SocketType type);
@@ -99,7 +100,7 @@ struct kNetBuffer
     /// can write to buf, at maximum.
     unsigned long len;
 
-    char *buf;
+    char* buf;
 };
 #endif
 
@@ -127,14 +128,13 @@ class Socket : public RefCountable
 public:
     Socket();
 
-    Socket(SOCKET connection, const EndPoint &localEndPoint, const char *localHostName,
-        const EndPoint &remoteEndPoint, const char *remoteHostName,
-        SocketTransportLayer transport, SocketType type, size_t maxSendSize);
+    Socket(SOCKET connection, const EndPoint& localEndPoint, const char* localHostName, const EndPoint& remoteEndPoint,
+        const char* remoteHostName, SocketTransportLayer transport, SocketType type, size_t maxSendSize);
 
-    Socket(const Socket &);
+    Socket(const Socket&);
     ~Socket();
 
-    Socket &operator=(const Socket &);
+    Socket& operator=(const Socket&);
 
     /// Sets the underlying socket send buffer (SO_SNDBUF) size.
     void SetSendBufferSize(int bytes);
@@ -165,42 +165,44 @@ public:
     /// Returns whether this socket is a UDP slave socket. [worker thread]
     bool IsUDPSlaveSocket() const { return transport == SocketOverUDP && type == ServerClientSocket; }
 
-    /// Performs a write close operation on the socket, signalling the other end that no more data will be sent. Any data
-    /// currently left in the send buffers will be sent over to the other side, but no new data can be sent. The connection
-    /// will remain half-open for reading, and Receive() calls may still be made to the socket. When a read returns 0, the
-    /// connection will be transitioned to bidirectionally closed state (Connected() will return false).
+    /// Performs a write close operation on the socket, signalling the other end that no more data will be sent. Any
+    /// data currently left in the send buffers will be sent over to the other side, but no new data can be sent. The
+    /// connection will remain half-open for reading, and Receive() calls may still be made to the socket. When a read
+    /// returns 0, the connection will be transitioned to bidirectionally closed state (Connected() will return false).
     void Disconnect();
-    /// Performs an immediate write and read close on the socket, without waiting for the connection to gracefully shut down.
+    /// Performs an immediate write and read close on the socket, without waiting for the connection to gracefully shut
+    /// down.
     void Close();
 
-    /// Sends the given data through the socket. This function may only be called if Socket::IsWriteOpen() returns true. If
-    /// the socket is not write-open, calls to this function will fail.
-    /// This function is an orthogonal API to the overlapped IO Send routines. Do not mix these API calls when doing
-    /// networking, but instead choose one preferred method and consistently use it.
-    bool Send(const char *data, size_t numBytes);
+    /// Sends the given data through the socket. This function may only be called if Socket::IsWriteOpen() returns true.
+    /// If the socket is not write-open, calls to this function will fail. This function is an orthogonal API to the
+    /// overlapped IO Send routines. Do not mix these API calls when doing networking, but instead choose one preferred
+    /// method and consistently use it.
+    bool Send(const char* data, size_t numBytes);
 
-    /// Waits until the Socket is ready for sending. Returns true if the socket transitioned to write-ready state in the given
-    /// time period, or false if the wait timed out or if some other error occurred.
-    /// This function is an orthogonal API to the overlapped IO Send routines. Do not mix these API calls when doing
-    /// networking, but instead choose one preferred method and consistently use it.
+    /// Waits until the Socket is ready for sending. Returns true if the socket transitioned to write-ready state in the
+    /// given time period, or false if the wait timed out or if some other error occurred. This function is an
+    /// orthogonal API to the overlapped IO Send routines. Do not mix these API calls when doing networking, but instead
+    /// choose one preferred method and consistently use it.
     bool WaitForSendReady(int msecs);
 
     /// Starts the sending of new data. After having filled the data to send to the OverlappedTransferBuffer that is
-    /// returned here, commit the send by calling EndSend. If you have called BeginSend, but decide not to send any data,
-    /// call AbortSend instead (otherwise memory will leak).
+    /// returned here, commit the send by calling EndSend. If you have called BeginSend, but decide not to send any
+    /// data, call AbortSend instead (otherwise memory will leak).
     /// @param maxBytesToSend Specifies the size of the buffer that must be returned. Specify the size (or at least an
-    ///         upper limit) of the message you are sending here. Specify the actual number of bytes filled in the resulting
-    ///         structure.
+    ///         upper limit) of the message you are sending here. Specify the actual number of bytes filled in the
+    ///         resulting structure.
     /// @return A transfer buffer where the data to send is to be filled in. If no new data can be sent at this time,
     ///         this function returns 0.
-    OverlappedTransferBuffer *BeginSend(int maxBytesToSend);
+    OverlappedTransferBuffer* BeginSend(int maxBytesToSend);
     /// Finishes and queues up the given transfer that was created with a call to BeginSend.
     /// @return True if send succeeded, false otherwise. In either case, the ownership of the passed buffer send
-    ///         is taken by this Socket and may not be accessed anymore. Discard the pointer after calling this function.
-    bool EndSend(OverlappedTransferBuffer *send);
-    /// Cancels the sending of data. Call this function if you first call BeginSend, but decide you don't want to send the data.
-    /// This frees the given buffer, do not dereference it after calling this function.
-    void AbortSend(OverlappedTransferBuffer *send);
+    ///         is taken by this Socket and may not be accessed anymore. Discard the pointer after calling this
+    ///         function.
+    bool EndSend(OverlappedTransferBuffer* send);
+    /// Cancels the sending of data. Call this function if you first call BeginSend, but decide you don't want to send
+    /// the data. This frees the given buffer, do not dereference it after calling this function.
+    void AbortSend(OverlappedTransferBuffer* send);
 
 #ifdef _WIN32
     /// Returns the number of sends in the send queue.
@@ -210,27 +212,31 @@ public:
 #endif
     /// Returns true if it is possible to send out new data. In this case, a call to BeginSend will succeed.
     bool IsOverlappedSendReady();
-    /// Returns the event object that should be waited on to receive a notification when it is possible to send out new data.
+    /// Returns the event object that should be waited on to receive a notification when it is possible to send out new
+    /// data.
     Event GetOverlappedSendEvent();
 
     /// Waits for the max given amount of time for new data to be received from the socket.
     /// @return True if new data was received, false if the timeout period elapsed.
-//    bool WaitForData(int msecs); // this will be removed completely.
+    //    bool WaitForData(int msecs); // this will be removed completely.
 
     /// Reads in data from the socket. If there is no data available, this function will not block, but will immediately
     /// return 0.
-    /// This function issues an immediate recv() call to the socket and is not compatible with the Overlapped Transfer API
-    /// above. Do not mix the use of these two APIs, but pick one method to use and stay with it.
-    /// @param endPoint [out] If the socket is an UDP socket that is not bound to an address, this will contain the source address.
+    /// This function issues an immediate recv() call to the socket and is not compatible with the Overlapped Transfer
+    /// API above. Do not mix the use of these two APIs, but pick one method to use and stay with it.
+    /// @param endPoint [out] If the socket is an UDP socket that is not bound to an address, this will contain the
+    /// source address.
     /// @return The number of bytes that were successfully read.
-    size_t Receive(char *dst, size_t maxBytes, EndPoint *endPoint = 0);
+    size_t Receive(char* dst, size_t maxBytes, EndPoint* endPoint = 0);
 
     /// Call to receive new data from the socket.
-    /// @return A buffer that contains the data, or 0 if no new data was available. When you are finished reading the buffer, call
+    /// @return A buffer that contains the data, or 0 if no new data was available. When you are finished reading the
+    /// buffer, call
     ///         EndReceive to free up the buffer, or memory will leak.
-    OverlappedTransferBuffer *BeginReceive();
-    /// Finishes a read operation on the socket. Frees the given buffer to be re-queued for a future socket read operation.
-    void EndReceive(OverlappedTransferBuffer *buffer);
+    OverlappedTransferBuffer* BeginReceive();
+    /// Finishes a read operation on the socket. Frees the given buffer to be re-queued for a future socket read
+    /// operation.
+    void EndReceive(OverlappedTransferBuffer* buffer);
 #ifdef _WIN32
     /// Returns the number of receive buffers that have been queued for the socket.
     int NumOverlappedReceivesInProgress() const { return queuedReceiveBuffers.Size(); }
@@ -240,7 +246,7 @@ public:
     /// Returns true if there is new data to be read in. In that case, BeginReceive() will not return 0.
     bool IsOverlappedReceiveReady() const;
     /// Returns the event object that will be notified whenever data is available to be read from the socket.
-    Event GetOverlappedReceiveEvent(); // [worker thread]
+    Event GetOverlappedReceiveEvent();  // [worker thread]
 
     /// Returns which transport layer the connection is using. This value is either SocketOverUDP or SocketOverTCP.
     SocketTransportLayer TransportLayer() const { return transport; }
@@ -253,19 +259,19 @@ public:
     size_t MaxSendSize() const { return maxSendSize; }
 
     /// Returns the local EndPoint this socket is bound to.
-    const EndPoint &LocalEndPoint() const { return localEndPoint; }
+    const EndPoint& LocalEndPoint() const { return localEndPoint; }
     /// Returns the local address (local hostname) of the local end point this socket is bound to.
-    const char *LocalAddress() const { return localHostName.c_str(); }
+    const char* LocalAddress() const { return localHostName.c_str(); }
     /// Returns the local port that this socket is bound to.
     unsigned short LocalPort() const { return localEndPoint.port; }
 
     /// Returns the remote EndPoint this socket is connected to.
     /// If SocketType == ServerListenSocket, this socket is not bound
     /// to any remote end point, and so the returned struct is uninitialized (filled with zeroes).
-    const EndPoint &RemoteEndPoint() const { return remoteEndPoint; }
+    const EndPoint& RemoteEndPoint() const { return remoteEndPoint; }
     /// Returns the destination address (destination hostname) of the remote end point this socket is connected to.
     /// If SocketType == ServerListenSocket, returns an empty string.
-    const char *DestinationAddress() const { return remoteHostName.c_str(); }
+    const char* DestinationAddress() const { return remoteHostName.c_str(); }
     /// Returns the destination port of the remote end point this socket is connected to.
     /// If SocketType == ServerListenSocket, returns 0.
     unsigned short DestinationPort() const { return remoteEndPoint.port; }
@@ -277,13 +283,13 @@ public:
     /// Sets the socket to blocking or nonblocking state.
     void SetBlocking(bool isBlocking);
 
-    SOCKET &GetSocketHandle() { return connectSocket; }
+    SOCKET& GetSocketHandle() { return connectSocket; }
 
     /// Enables or disables the use of Nagle's algorithm (TCP_NODELAY) for this socket.
     /// Nagle's algorithm reduces the bandwidth consumption of the channel, but can increase latency.
-    /// Conversely, disabling Nagle's algorithm improves the latency, but increases the number of IP packets sent to the network.
-    /// By default, Nagle's algorithm is enabled.
-    /// Read more about Nagle's algorithm here: http://msdn.microsoft.com/en-us/library/ms817942.aspx
+    /// Conversely, disabling Nagle's algorithm improves the latency, but increases the number of IP packets sent to the
+    /// network. By default, Nagle's algorithm is enabled. Read more about Nagle's algorithm here:
+    /// http://msdn.microsoft.com/en-us/library/ms817942.aspx
     void SetNaglesAlgorithmEnabled(bool enabled);
 
 private:
@@ -330,7 +336,8 @@ private:
     /// Tracks whether data can be sent through this socket.
     bool writeOpen;
 
-    /// Tracks whether the socket is open for receiving data (doesn't mean that there necessarily exists new data to be read).
+    /// Tracks whether the socket is open for receiving data (doesn't mean that there necessarily exists new data to be
+    /// read).
     bool readOpen;
 
 #ifdef _WIN32
@@ -340,8 +347,8 @@ private:
     /// Frees all allocated data in the queuedReceiveBuffers and queuedSendBuffers queues.
     void FreeOverlappedTransferBuffers();
 
-    void EnqueueNewReceiveBuffer(OverlappedTransferBuffer *buffer = 0);
+    void EnqueueNewReceiveBuffer(OverlappedTransferBuffer* buffer = 0);
 #endif
 };
 
-} // ~kNet
+}  // ~kNet

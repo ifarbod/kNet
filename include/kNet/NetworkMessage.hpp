@@ -3,7 +3,7 @@
 // Author(s):       kNet Authors <https://github.com/juj/kNet>
 //                  iFarbod <>
 //
-// Copyright (c) 2015-2017 CtNorth Team
+// Copyright (c) 2015-2017 Project CTNorth
 //
 // Distributed under the MIT license (See accompanying file LICENSE or copy at
 // https://opensource.org/licenses/MIT)
@@ -13,9 +13,8 @@
 /** @file NetworkMessage.h
     @brief The class NetworkMessage. Stores an outbound network message. */
 
-
-#include "LockFreePoolAllocator.hpp"
 #include "FragmentedTransferManager.hpp"
+#include "LockFreePoolAllocator.hpp"
 #include "Types.hpp"
 
 namespace kNet
@@ -42,7 +41,7 @@ inline packet_id_t SubPacketID(packet_id_t id, int sub)
     if ((int)id >= sub)
         return (packet_id_t)(id - sub);
     else
-        return (packet_id_t)((1 << 22) - (sub-id));
+        return (packet_id_t)((1 << 22) - (sub - id));
 }
 
 /// NetworkMessage stores the serialized byte data of a single outbound network message, along
@@ -55,27 +54,29 @@ public:
     /// structures which are reused between messages, to avoid excessive dynamic memory allocation.
     NetworkMessage();
 
-    NetworkMessage &operator=(const NetworkMessage &rhs);
-    NetworkMessage(const NetworkMessage &rhs);
+    NetworkMessage& operator=(const NetworkMessage& rhs);
+    NetworkMessage(const NetworkMessage& rhs);
 
     ~NetworkMessage();
 
     /// Stores the actual data of the message.
-    /// When writing a new message, fill in the data bytes here. This buffer can hold Capacity() amount of bytes. If you need more,
-    /// call Reallocate() with the desired amount of bytes.
-    /// This field is read-only, do not change this pointer value.
-    char *data;
+    /// When writing a new message, fill in the data bytes here. This buffer can hold Capacity() amount of bytes. If you
+    /// need more, call Reallocate() with the desired amount of bytes. This field is read-only, do not change this
+    /// pointer value.
+    char* data;
 
     size_t Capacity() const { return dataCapacity; }
 
     size_t Size() const { return dataSize; }
 
-    /// Resizes the message to the given amount of bytes. Reallocates the data buffer if it cannot fit into the new size.
+    /// Resizes the message to the given amount of bytes. Reallocates the data buffer if it cannot fit into the new
+    /// size.
     /// @param newBytes The new amount of bytes to use for the message.
-    /// @param discard If true, any existing partially filled data will not be copied over, but the new buffer will have its
-    ///                bytes left uninitialized. If false, this function preserves any old partially filled data and works
-    ///                like std::vector::resize(). The intended purpose of this function is to be called prior to filling
-    ///                in any data, and so the default value is true.
+    /// @param discard If true, any existing partially filled data will not be copied over, but the new buffer will have
+    /// its
+    ///                bytes left uninitialized. If false, this function preserves any old partially filled data and
+    ///                works like std::vector::resize(). The intended purpose of this function is to be called prior to
+    ///                filling in any data, and so the default value is true.
     void Resize(size_t newBytes, bool discard = true);
 
     /// The send priority of this message with respect to other messages. Priority 0 is the lowest, and
@@ -110,7 +111,10 @@ public:
 #endif
 
     /// Checks if this message is newer than the other message.
-    bool IsNewerThan(const NetworkMessage &rhs) const { return (unsigned long)(messageNumber - rhs.messageNumber) < 0x80000000; }
+    bool IsNewerThan(const NetworkMessage& rhs) const
+    {
+        return (unsigned long)(messageNumber - rhs.messageNumber) < 0x80000000;
+    }
 
     /// A message with this priority is obsolete and should not be sent through the connection.
     static const unsigned long cPriorityDontSend = 0xFFFFFFFF;
@@ -120,7 +124,8 @@ public:
     /// Returns the total number of bytes this datagram will take up space when it is serialized to an UDP channel.
     int GetTotalDatagramPackedSize() const;
 
-    /// Returns the number of this message. The message number identifies the admission order of messages to the outbound queue.
+    /// Returns the number of this message. The message number identifies the admission order of messages to the
+    /// outbound queue.
     unsigned long MessageNumber() const { return messageNumber; }
 
 private:
@@ -159,7 +164,7 @@ private:
 
     /// If 0, this message is being sent unfragmented. Otherwise, this NetworkMessage is a fragment of the whole
     /// message and transfer points to the data structure that tracks the transfer of a fragmented message.
-    FragmentedSendManager::FragmentedTransfer *transfer;
+    FragmentedSendManager::FragmentedTransfer* transfer;
 };
 
-} // ~kNet
+}  // ~kNet

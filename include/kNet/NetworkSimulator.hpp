@@ -3,7 +3,7 @@
 // Author(s):       kNet Authors <https://github.com/juj/kNet>
 //                  iFarbod <>
 //
-// Copyright (c) 2015-2017 CtNorth Team
+// Copyright (c) 2015-2017 Project CTNorth
 //
 // Distributed under the MIT license (See accompanying file LICENSE or copy at
 // https://opensource.org/licenses/MIT)
@@ -13,10 +13,10 @@
 /** @file NetworkSimulator.h
     @brief The NetworkSimulator class, which enables different network conditions testing. */
 
-#include "kNetFwd.hpp"
+#include <vector>
 #include "PolledTimer.hpp"
 #include "Types.hpp"
-#include <vector>
+#include "kNetFwd.hpp"
 
 #include <cstring>
 
@@ -41,7 +41,8 @@ public:
     /// Specifies a constant delay to add to each packet (msecs). Default: 0.
     float constantPacketSendDelay;
 
-    /// Specifies an amount of uniformly random delay to add to each packet (msecs), [0, uniformRandomPacketSendDelay].  Default: 0.
+    /// Specifies an amount of uniformly random delay to add to each packet (msecs), [0, uniformRandomPacketSendDelay].
+    /// Default: 0.
     float uniformRandomPacketSendDelay;
 
     /// Specifies the percentage of messages to duplicate. This is in the range [0.0, 1.0]. Default: 0 (disabled).
@@ -50,9 +51,10 @@ public:
     /// Corruption options.
     enum
     {
-        CorruptDatagram, ///< The whole datagram is subjected to data corruption. This is the default.
-        CorruptPayload, ///< Only kNet message payload (client-side data) will be subjected to corruption.
-        CorruptMessageType ///< Only the message payload of a single given message type will be subjected to corruption.
+        CorruptDatagram,    ///< The whole datagram is subjected to data corruption. This is the default.
+        CorruptPayload,     ///< Only kNet message payload (client-side data) will be subjected to corruption.
+        CorruptMessageType  ///< Only the message payload of a single given message type will be subjected to
+                            ///corruption.
     } corruptionType;
 
     /// If corruptionType == CorruptMessageType, this field specifies a single specific message type ID which
@@ -68,7 +70,7 @@ public:
     /// The maximum number of bits to corrupt when a datagram is decided to be tampered. Default: 0.
     int corruptMaxBits;
 
-    void SubmitSendBuffer(OverlappedTransferBuffer *buffer, Socket *socket);
+    void SubmitSendBuffer(OverlappedTransferBuffer* buffer, Socket* socket);
 
     /// Runs a polled update tick on the network simulator. Transfers all expired data.
     void Process();
@@ -80,22 +82,21 @@ public:
     /// of the given buffer.
     /// Alters the raw byte buffer contents by flipping some bits according to the currently specified
     /// parameters.
-    void MaybeCorruptBufferToggleBits(void *buffer, size_t numBytes) const;
+    void MaybeCorruptBufferToggleBits(void* buffer, size_t numBytes) const;
 
 private:
     struct QueuedBuffer
     {
-        OverlappedTransferBuffer *buffer;
+        OverlappedTransferBuffer* buffer;
 
         /// Stores how long to delay this buffer until transfer.
         PolledTimer timeUntilTransfer;
     };
     std::vector<QueuedBuffer> queuedBuffers;
 
-    MessageConnection *owner;
+    MessageConnection* owner;
 
     friend class MessageConnection;
 };
 
-} // ~kNet
-
+}  // ~kNet

@@ -3,7 +3,7 @@
 // Author(s):       kNet Authors <https://github.com/juj/kNet>
 //                  iFarbod <>
 //
-// Copyright (c) 2015-2017 CtNorth Team
+// Copyright (c) 2015-2017 Project CTNorth
 //
 // Distributed under the MIT license (See accompanying file LICENSE or copy at
 // https://opensource.org/licenses/MIT)
@@ -28,55 +28,51 @@ namespace kNet
      - Does not perform any memory allocation after initialization.
      - Only POD types are supported. If you need non-POD objects, store pointers to objects instead.
      - The queue has a fixed upper size that must be a power-of-2 and must be speficied in the constructor. */
-template<typename T>
+template <typename T>
 class WaitFreeQueue
 {
 public:
-    /// @param maxElements A power-of-2 number, > 2,  that specifies the size of the ring buffer to construct. The number of elements the queue can store is maxElements-1.
-    explicit WaitFreeQueue(size_t maxElements)
-    :head(0), tail(0)
+    /// @param maxElements A power-of-2 number, > 2,  that specifies the size of the ring buffer to construct. The
+    /// number of elements the queue can store is maxElements-1.
+    explicit WaitFreeQueue(size_t maxElements) : head(0), tail(0)
     {
-        assert(IS_POW2(maxElements)); // The caller really needs to round to correct pow2,
+        assert(IS_POW2(maxElements));  // The caller really needs to round to correct pow2,
         assert(maxElements > 2);
-        maxElements = (size_t)RoundUpToNextPow2((u32)maxElements); // but avoid any silliness in release anyways.
+        maxElements = (size_t)RoundUpToNextPow2((u32)maxElements);  // but avoid any silliness in release anyways.
 
         data = new T[maxElements];
         maxElementsMask = (unsigned long)maxElements - 1;
     }
 
     /// Warning: This is not thread-safe.
-    WaitFreeQueue(const WaitFreeQueue &rhs)
-    :maxElementsMask(rhs.maxElementsMask), head(rhs.head), tail(rhs.tail)
+    WaitFreeQueue(const WaitFreeQueue& rhs) : maxElementsMask(rhs.maxElementsMask), head(rhs.head), tail(rhs.tail)
     {
-        size_t maxElements = rhs.maxElementsMask+1;
+        size_t maxElements = rhs.maxElementsMask + 1;
         data = new T[maxElements];
-        for(size_t i = 0; i < maxElements; ++i)
+        for (size_t i = 0; i < maxElements; ++i)
             data[i] = rhs.data[i];
     }
 
     /// Warning: This is not thread-safe.
-    WaitFreeQueue &operator =(const WaitFreeQueue &rhs)
+    WaitFreeQueue& operator=(const WaitFreeQueue& rhs)
     {
         if (this == &rhs)
             return *this;
 
         head = rhs.head;
         tail = rhs.tail;
-        size_t maxElements = rhs.maxElementsMask+1;
+        size_t maxElements = rhs.maxElementsMask + 1;
         maxElementsMask = rhs.maxElementsMask;
 
         delete[] data;
         data = new T[maxElements];
-        for(size_t i = 0; i < maxElements; ++i)
+        for (size_t i = 0; i < maxElements; ++i)
             data[i] = rhs.data[i];
 
         return *this;
     }
 
-    ~WaitFreeQueue()
-    {
-        delete[] data;
-    }
+    ~WaitFreeQueue() { delete[] data; }
 
     /// Returns the total capacity of the queue, i.e. the total maximum number of items that can be contained in it.
     /// Thread-safe.
@@ -98,7 +94,7 @@ public:
     ///       and no value can be added. For each returned pointer, call FinishInsert after filling the value
     ///       to commit it to the queue. If 0 is returned, FinishInsert does not need to be called.
     ///  This function can be called only by a single producer thread.
-    T *BeginInsert()
+    T* BeginInsert()
     {
         unsigned long tail_ = tail;
         unsigned long nextTail = (tail_ + 1) & maxElementsMask;
@@ -118,7 +114,7 @@ public:
     }
 
     /// Inserts the new value into the queue. Can be called only by a single producer thread.
-    bool Insert(const T &value)
+    bool Insert(const T& value)
     {
         // Inserts are made to the 'tail' of the queue, incrementing the tail index.
         unsigned long tail_ = tail;
@@ -135,7 +131,7 @@ public:
     /// of the queue is doubled.
     /// \note This function is not thread-safe. Do not call this if you cannot guarantee that the other
     ///       thread will not be accessing the queue at the same time.
-    void InsertWithResize(const T &value)
+    void InsertWithResize(const T& value)
     {
         bool success = Insert(value);
         if (!success)
@@ -156,12 +152,12 @@ public:
     ///       thread will not be accessing the queue at the same time.
     void Resize(size_t newSize)
     {
-        assert(IS_POW2(newSize)); // The caller really needs to round to correct pow2,
-        newSize = (size_t)RoundUpToNextPow2((u32)newSize); // but avoid any silliness in release anyways.
+        assert(IS_POW2(newSize));                           // The caller really needs to round to correct pow2,
+        newSize = (size_t)RoundUpToNextPow2((u32)newSize);  // but avoid any silliness in release anyways.
 
-        T *newData = new T[newSize];
+        T* newData = new T[newSize];
         unsigned long newTail = 0;
-        for(int i = 0; i < Size(); ++i)
+        for (int i = 0; i < Size(); ++i)
             newData[newTail++] = *ItemAt(i);
         delete[] data;
         data = newData;
@@ -173,12 +169,12 @@ public:
     /// Resizes this queue to hold twice the amount of maximum elements.
     /// \note This function is not thread-safe. Do not call this if you cannot guarantee that the other
     ///       thread will not be accessing the queue at the same time.
-    void DoubleCapacity() { Resize(2*(maxElementsMask+1)); }
+    void DoubleCapacity() { Resize(2 * (maxElementsMask + 1)); }
 
     /// Returns a pointer to the first item in the queue (the item that is coming off next, i.e. the one that has
     /// been in the queue the longest). Can be called only from a single consumer thread.
     /// This function can safely be called even if the queue is empty, in which case 0 is returned.
-    T *Front()
+    T* Front()
     {
         if (head == tail)
             return 0;
@@ -188,15 +184,15 @@ public:
     /// Returns a pointer to the first item in the queue (the item that is coming off next, i.e. the one that has
     /// been in the queue the longest). Can be called only from a single consumer thread.
     /// This function can safely be called even if the queue is empty, in which case 0 is returned.
-    const T *Front() const
+    const T* Front() const
     {
         if (head == tail)
             return 0;
         return &data[head];
     }
 
-    /// Returns a copy of the first item in the queue and pops that item off the queue. Can be called only from a single consumer thread.
-    /// Requires that there exists an element in the queue.
+    /// Returns a copy of the first item in the queue and pops that item off the queue. Can be called only from a single
+    /// consumer thread. Requires that there exists an element in the queue.
     T TakeFront()
     {
         assert(Front());
@@ -207,7 +203,7 @@ public:
 
     /// Returns a pointer to the last item (the item that was just added) in the queue.
     /// Can be called only from a single consumer thread.
-    T *Back()
+    T* Back()
     {
         if (head == tail)
             return 0;
@@ -216,7 +212,7 @@ public:
 
     /// Returns a pointer to the last item (the item that was just added) in the queue.
     /// Can be called only from a single consumer thread.
-    const T *Back() const
+    const T* Back() const
     {
         if (head == tail)
             return 0;
@@ -226,7 +222,7 @@ public:
     /// Returns a pointer to the item at the given index. ItemAt(0) will return the first item (the front item)
     /// in the queue. Can be called only from a single consumer thread.
     /// Never returns a null pointer.
-    T *ItemAt(int index)
+    T* ItemAt(int index)
     {
         assert(index >= 0 && index < (int)Size());
         return &data[(head + index) & maxElementsMask];
@@ -234,16 +230,16 @@ public:
 
     /// Returns a pointer to the item at the given index. Can be called only from a single consumer thread.
     /// Never returns a null pointer.
-    const T *ItemAt(int index) const
+    const T* ItemAt(int index) const
     {
         assert(index >= 0 && index < (int)Size());
         return &data[(head + index) & maxElementsMask];
     }
 
     /// Returns true if the given element exists in the queue. Can be called only from a single consumer thread.
-    bool Contains(const T &item) const
+    bool Contains(const T& item) const
     {
-        for(int i = 0; i < (int)Size(); ++i)
+        for (int i = 0; i < (int)Size(); ++i)
             if (*ItemAt(i) == item)
                 return true;
         return false;
@@ -253,7 +249,7 @@ public:
     ///\note Not thread-safe.
     void EraseItemAt(int index)
     {
-        if (index <= Size()>>1)
+        if (index <= Size() >> 1)
             EraseItemAtMoveFront(index);
         else
             EraseItemAtMoveBack(index);
@@ -261,12 +257,10 @@ public:
 
     /// Removes all elements in the queue. Does not call dtors for removed objects, as this queue is only for POD types.
     /// Can be called only from a single consumer thread.
-    void Clear()
-    {
-        tail = head;
-    }
+    void Clear() { tail = head; }
 
-    /// Returns the number of elements currently filled in the queue. Can be called from either the consumer or producer thread.
+    /// Returns the number of elements currently filled in the queue. Can be called from either the consumer or producer
+    /// thread.
     int Size() const
     {
         unsigned long head_ = head;
@@ -288,7 +282,7 @@ public:
     }
 
 private:
-    T *data;
+    T* data;
     /// Stores the AND mask (2^Size-1) used to perform the modulo check.
     unsigned long maxElementsMask;
     /// Stores the index of the first element in the queue. The next item to come off the queue is at this position,
@@ -297,41 +291,43 @@ private:
     /// Stores the index of one past the last element in the queue. \todo Convert to C++0x atomic<unsigned long> head;
     volatile unsigned long tail;
 
-    /// Removes the element at the given index, but instead of filling the contiguous gap that forms by moving elements to the
-    /// right, this function will instead move items at the front of the queue.
+    /// Removes the element at the given index, but instead of filling the contiguous gap that forms by moving elements
+    /// to the right, this function will instead move items at the front of the queue.
     ///\note Not thread-safe.
     void EraseItemAtMoveFront(int index)
     {
         assert(Size() > 0);
         int numItemsToMove = index;
-        for(int i = 0; i < numItemsToMove; ++i)
-            data[(head+index + maxElementsMask+1 -i)&maxElementsMask] = data[(head+index + maxElementsMask+1 -i-1) &maxElementsMask];
-        head = (head+1) & maxElementsMask;
+        for (int i = 0; i < numItemsToMove; ++i)
+            data[(head + index + maxElementsMask + 1 - i) & maxElementsMask] =
+                data[(head + index + maxElementsMask + 1 - i - 1) & maxElementsMask];
+        head = (head + 1) & maxElementsMask;
     }
 
-    /// Removes the element at the given index, and fills the contiguous gap that forms by shuffling each item after index one space down.
+    /// Removes the element at the given index, and fills the contiguous gap that forms by shuffling each item after
+    /// index one space down.
     ///\note Not thread-safe.
     void EraseItemAtMoveBack(int index)
     {
         assert(Size() > 0);
-        int numItemsToMove = Size()-1-index;
-        for(int i = 0; i < numItemsToMove; ++i)
-            data[(head+index+i)&maxElementsMask] = data[(head+index+i+1)&maxElementsMask];
-        tail = (tail + maxElementsMask+1 - 1) & maxElementsMask;
+        int numItemsToMove = Size() - 1 - index;
+        for (int i = 0; i < numItemsToMove; ++i)
+            data[(head + index + i) & maxElementsMask] = data[(head + index + i + 1) & maxElementsMask];
+        tail = (tail + maxElementsMask + 1 - 1) & maxElementsMask;
     }
 };
 
 /// Checks that the specified conditions for the container apply.
 /// Warning: This is a non-threadsafe check for the container, only to be used for debugging.
 /// Warning #2: This function is very slow, as it performs a N^2 search through the container.
-template<typename T>
-bool ContainerUniqueAndNoNullElements(const WaitFreeQueue<T> &cont)
+template <typename T>
+bool ContainerUniqueAndNoNullElements(const WaitFreeQueue<T>& cont)
 {
-    for(size_t i = 0; i < cont.Size(); ++i)
-        for(size_t j = i+1; j < cont.Size(); ++j)
+    for (size_t i = 0; i < cont.Size(); ++i)
+        for (size_t j = i + 1; j < cont.Size(); ++j)
             if (*cont.ItemAt(i) == *cont.ItemAt(j) || *cont.ItemAt(i) == 0)
                 return false;
     return true;
 }
 
-} // ~kNet
+}  // ~kNet

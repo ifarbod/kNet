@@ -3,7 +3,7 @@
 // Author(s):       kNet Authors <https://github.com/juj/kNet>
 //                  iFarbod <>
 //
-// Copyright (c) 2015-2017 CtNorth Team
+// Copyright (c) 2015-2017 Project CTNorth
 //
 // Distributed under the MIT license (See accompanying file LICENSE or copy at
 // https://opensource.org/licenses/MIT)
@@ -14,17 +14,16 @@
     @brief The class Network. The root point for creating client and server objects. */
 
 #ifndef _WIN32
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
 #include <netdb.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 #include <unistd.h>
 #endif
 
-
-#include "Socket.hpp"
-#include "NetworkServer.hpp"
 #include "MessageConnection.hpp"
+#include "NetworkServer.hpp"
+#include "Socket.hpp"
 #include "StatsEventHierarchy.hpp"
 
 namespace kNet
@@ -39,44 +38,52 @@ public:
     Network();
     ~Network();
 
-    static void PrintAddrInfo(const addrinfo *address);
+    static void PrintAddrInfo(const addrinfo* address);
 
-    void PrintHostNameInfo(const char *hostname, const char *port);
+    void PrintHostNameInfo(const char* hostname, const char* port);
 
     /// Starts a network server that listens to the given local port.
     /// @param serverListener [in] A pointer to the listener object that will be registered to receive notifications
     ///    about incoming connections.
-    /// @param allowAddressReuse If true, kNet passes the SO_REUSEADDR parameter to the server listen socket before binding
-    ///        the socket to a local port (== before starting the server). This allows the same port to be forcibly reused
-    ///        when restarting the server if a crash occurs, without having to wait for the operating system to free up the port.
-    NetworkServer *StartServer(unsigned short port, SocketTransportLayer transport, INetworkServerListener *serverListener, bool allowAddressReuse);
+    /// @param allowAddressReuse If true, kNet passes the SO_REUSEADDR parameter to the server listen socket before
+    /// binding
+    ///        the socket to a local port (== before starting the server). This allows the same port to be forcibly
+    ///        reused when restarting the server if a crash occurs, without having to wait for the operating system to
+    ///        free up the port.
+    NetworkServer* StartServer(unsigned short port, SocketTransportLayer transport,
+        INetworkServerListener* serverListener, bool allowAddressReuse);
 
     /// Starts a network server that listens to multiple local ports.
     /// This version of the function is given a list of pairs (port, UDP|TCP) values
     /// and the server will start listening on each of them.
-    /// @param allowAddressReuse If true, kNet passes the SO_REUSEADDR parameter to the server listen socket before binding
-    ///        the socket to a local port (== before starting the server). This allows the same port to be forcibly reused
-    ///        when restarting the server if a crash occurs, without having to wait for the operating system to free up the port.
-    NetworkServer *StartServer(const std::vector<std::pair<unsigned short, SocketTransportLayer> > &listenPorts, INetworkServerListener *serverListener, bool allowAddressReuse);
+    /// @param allowAddressReuse If true, kNet passes the SO_REUSEADDR parameter to the server listen socket before
+    /// binding
+    ///        the socket to a local port (== before starting the server). This allows the same port to be forcibly
+    ///        reused when restarting the server if a crash occurs, without having to wait for the operating system to
+    ///        free up the port.
+    NetworkServer* StartServer(const std::vector<std::pair<unsigned short, SocketTransportLayer>>& listenPorts,
+        INetworkServerListener* serverListener, bool allowAddressReuse);
 
     void StopServer();
 
     /// Connects a raw socket (low-level, no MessageConnection abstraction) to the given destination.
-    Socket *ConnectSocket(const char *address, unsigned short port, SocketTransportLayer transport);
+    Socket* ConnectSocket(const char* address, unsigned short port, SocketTransportLayer transport);
 
     /// Frees the given Socket object (performs an immediate bidirectional shutdown and frees the socket). After calling
     /// this function, do not dereference that Socket pointer, as it is deleted.
-    void DeleteSocket(Socket *socket);
+    void DeleteSocket(Socket* socket);
 
     /// Closes the given MessageConnection object.
-    void CloseConnection(MessageConnection *connection);
+    void CloseConnection(MessageConnection* connection);
 
     /** Connects to the given address:port using kNet over UDP or TCP. When you are done with the connection,
         free it by letting the refcount go to 0. */
-    Ptr(MessageConnection) Connect(const char *address, unsigned short port, SocketTransportLayer transport, IMessageHandler *messageHandler, Datagram *connectMessage = 0);
+    Ptr(MessageConnection) Connect(const char* address, unsigned short port, SocketTransportLayer transport,
+        IMessageHandler* messageHandler, Datagram* connectMessage = 0);
 
-    /// Returns the local host name of the system (the local machine name or the local IP, whatever is specified by the system).
-    const char *LocalAddress() const { return localHostName.c_str(); }
+    /// Returns the local host name of the system (the local machine name or the local IP, whatever is specified by the
+    /// system).
+    const char* LocalAddress() const { return localHostName.c_str(); }
 
     /// Returns the error string associated with the given networking error id.
     static std::string GetErrorString(int error);
@@ -94,7 +101,7 @@ public:
     Ptr(NetworkServer) GetServer() { return server; }
 
     /// Returns all current connections in the system.
-    std::set<MessageConnection *> Connections() const { return connections; }
+    std::set<MessageConnection*> Connections() const { return connections; }
 
     /// Returns the data structure that collects statistics about the whole Network.
     Lock<StatsEventHierarchyNode> Statistics() { return statistics.Acquire(); }
@@ -112,27 +119,30 @@ private:
     std::list<Socket> sockets;
 
     /// Tracks all existing connections in the system.
-    std::set<MessageConnection *> connections;
+    std::set<MessageConnection*> connections;
 
     Lockable<StatsEventHierarchyNode> statistics;
 
     /// Takes the ownership of the given socket, and returns a pointer to the owned one.
-    Socket *StoreSocket(const Socket &cp);
+    Socket* StoreSocket(const Socket& cp);
 
     friend class NetworkServer;
 
-    void SendUDPConnectDatagram(Socket &socket, Datagram *connectMessage);
+    void SendUDPConnectDatagram(Socket& socket, Datagram* connectMessage);
 
     /// Returns a new UDP socket that is bound to communicating with the given endpoint, under
     /// the given UDP master server socket.
     /// The returned pointer is owned by this class.
-    Socket *CreateUDPSlaveSocket(Socket *serverListenSocket, const EndPoint &remoteEndPoint, const char *remoteHostName);
+    Socket* CreateUDPSlaveSocket(
+        Socket* serverListenSocket, const EndPoint& remoteEndPoint, const char* remoteHostName);
 
     /// Opens a new socket that listens on the given port using the given transport.
-    /// @param allowAddressReuse If true, kNet passes the SO_REUSEADDR parameter to the server listen socket before binding
-    ///        the socket to a local port (== before starting the server). This allows the same port to be forcibly reused
-    ///        when restarting the server if a crash occurs, without having to wait for the operating system to free up the port.
-    Socket *OpenListenSocket(unsigned short port, SocketTransportLayer transport, bool allowAddressReuse);
+    /// @param allowAddressReuse If true, kNet passes the SO_REUSEADDR parameter to the server listen socket before
+    /// binding
+    ///        the socket to a local port (== before starting the server). This allows the same port to be forcibly
+    ///        reused when restarting the server if a crash occurs, without having to wait for the operating system to
+    ///        free up the port.
+    Socket* OpenListenSocket(unsigned short port, SocketTransportLayer transport, bool allowAddressReuse);
 
     /// Stores all the currently running network worker threads. Each thread is assigned
     /// a list of MessageConnections and NetworkServers to oversee. The worker threads
@@ -142,29 +152,29 @@ private:
     /// Examines each currently running worker thread and returns one that has sufficiently low load,
     /// or creates a new thread and returns it if no such thread exists. The thread is added and maintained
     /// in the workerThreads list.
-    NetworkWorkerThread *GetOrCreateWorkerThread();
+    NetworkWorkerThread* GetOrCreateWorkerThread();
 
     /// A notification function that is called by NetworkServer whenever it creates a new MessageConnection object.
     /// The Network subsystem will store this new connection for tracking purposes.
-    void NewMessageConnectionCreated(MessageConnection *connection);
+    void NewMessageConnectionCreated(MessageConnection* connection);
 
     /// Takes the given MessageConnection and associates a NetworkWorkerThread for it.
-    void AssignConnectionToWorkerThread(MessageConnection *connection);
+    void AssignConnectionToWorkerThread(MessageConnection* connection);
 
     /// Takes the given server and associates a NetworkWorkerThread for it.
-    void AssignServerToWorkerThread(NetworkServer *server);
+    void AssignServerToWorkerThread(NetworkServer* server);
 
     /// Closes the given workerThread and deletes it (do not reference the passed pointer afterwards).
     /// Call this function only after first removing all MessageConnections and NetworkServers from the thread.
-    void CloseWorkerThread(NetworkWorkerThread *workerThread);
+    void CloseWorkerThread(NetworkWorkerThread* workerThread);
 
     /// Dissociates the given connection from its worker thread, and closes the worker thread if it does not
     /// have any servers or connections to work on any more.
-    void RemoveConnectionFromItsWorkerThread(MessageConnection *connection);
+    void RemoveConnectionFromItsWorkerThread(MessageConnection* connection);
 
     /// Dissociates the given server from its worker thread, and closes the worker thread if it does not
     /// have any servers or connections to work on any more.
-    void RemoveServerFromItsWorkerThread(NetworkServer *server);
+    void RemoveServerFromItsWorkerThread(NetworkServer* server);
 
     void Init();
     void DeInit();
@@ -179,4 +189,4 @@ std::string FormatBytes(u64 numBytes);
 
 std::string FormatBytes(double numBytes);
 
-} // ~kNet
+}  // ~kNet

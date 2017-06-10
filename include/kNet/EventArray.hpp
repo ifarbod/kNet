@@ -3,7 +3,7 @@
 // Author(s):       kNet Authors <https://github.com/juj/kNet>
 //                  iFarbod <>
 //
-// Copyright (c) 2015-2017 CtNorth Team
+// Copyright (c) 2015-2017 Project CTNorth
 //
 // Distributed under the MIT license (See accompanying file LICENSE or copy at
 // https://opensource.org/licenses/MIT)
@@ -37,12 +37,13 @@ public:
 
     /// Adds the given event to the array. There is a limitation of maximum of 64 simultaneous Events that can be added
     /// to an array.
-    void AddEvent(const Event &e);
+    void AddEvent(const Event& e);
 
     /// This status code is returned by Wait when none of the added events were triggered during the timeout period.
     static const int WaitTimedOut = -1;
 
-    /// This status code is returned by Wait when the OS specified an error - the wait list most likely contains invalid entries.
+    /// This status code is returned by Wait when the OS specified an error - the wait list most likely contains invalid
+    /// entries.
     static const int WaitFailed = -2;
 
     /// Waits for any of the added events to be triggered. Returns the index of the signalled event, or
@@ -54,7 +55,7 @@ public:
     int Size() const;
 
 private:
-    static const int maxEvents = 64; ///< WSAWaitForMultipleEvents has a built-in limit of 64 items, hence this value.
+    static const int maxEvents = 64;  ///< WSAWaitForMultipleEvents has a built-in limit of 64 items, hence this value.
     int numAdded;
 
 #ifdef _WIN32
@@ -71,4 +72,4 @@ private:
 #endif
 };
 
-} // ~kNet
+}  // ~kNet

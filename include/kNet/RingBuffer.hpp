@@ -3,7 +3,7 @@
 // Author(s):       kNet Authors <https://github.com/juj/kNet>
 //                  iFarbod <>
 //
-// Copyright (c) 2015-2017 CtNorth Team
+// Copyright (c) 2015-2017 Project CTNorth
 //
 // Distributed under the MIT license (See accompanying file LICENSE or copy at
 // https://opensource.org/licenses/MIT)
@@ -43,8 +43,8 @@ public:
             return;
 
         const int numBytes = Size();
-        for(int i = 0; i < numBytes; ++i)
-            data[i] = data[start+i];
+        for (int i = 0; i < numBytes; ++i)
+            data[i] = data[start + i];
 
         start = 0;
         end = numBytes;
@@ -57,21 +57,18 @@ public:
         assert(newSize > 0);
 
         if ((size_t)newSize <= data.size())
-            return; // No need to resize.
+            return;  // No need to resize.
         Compact();
         data.resize(newSize);
     }
 
-    void Clear()
-    {
-        start = end = 0;
-    }
+    void Clear() { start = end = 0; }
 
     /// Returns a pointer to the first byte of actual data.
-    char *Begin() { return &data[start]; }
+    char* Begin() { return &data[start]; }
 
     /// Returns a pointer to one past the last byte of actual data.
-    char *End() { return &data[end]; }
+    char* End() { return &data[end]; }
 
     int StartIndex() const { return start; }
 
@@ -87,7 +84,7 @@ public:
     {
         start += numBytes;
         assert(start <= end);
-        if (start == end) // Free compact?
+        if (start == end)  // Free compact?
             start = end = 0;
     }
 
@@ -99,9 +96,8 @@ public:
 
 private:
     std::vector<char> data;
-    int start; ///< Points to the first used byte.
-    int end; ///< Points to the first unused byte.
-
+    int start;  ///< Points to the first used byte.
+    int end;    ///< Points to the first unused byte.
 };
 
-} // ~kNet
+}  // ~kNet

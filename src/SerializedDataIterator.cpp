@@ -3,7 +3,7 @@
 // Author(s):       kNet Authors <https://github.com/juj/kNet>
 //                  iFarbod <>
 //
-// Copyright (c) 2015-2017 CtNorth Team
+// Copyright (c) 2015-2017 Project CTNorth
 //
 // Distributed under the MIT license (See accompanying file LICENSE or copy at
 // https://opensource.org/licenses/MIT)
@@ -35,7 +35,7 @@ BasicSerializedDataType SerializedDataIterator::NextElementType() const
     return currentElementStack.back().elem->type;
 }
 
-const SerializedElementDesc *SerializedDataIterator::NextElementDesc() const
+const SerializedElementDesc* SerializedDataIterator::NextElementDesc() const
 {
     return currentElementStack.empty() ? 0 : currentElementStack.back().elem;
 }
@@ -45,7 +45,7 @@ void SerializedDataIterator::ProceedToNextVariable()
     if (currentElementStack.empty())
         return;
 
-    ElemInfo &nextVar = currentElementStack.back();
+    ElemInfo& nextVar = currentElementStack.back();
 
     if (nextVar.elem->type == SerialStruct)
     {
@@ -78,13 +78,13 @@ void SerializedDataIterator::ProceedToNextVariable()
 void SerializedDataIterator::ProceedNVariables(int count)
 {
     ///\todo Can optimize a great deal here.
-    for(int i = 0; i < count; ++i)
+    for (int i = 0; i < count; ++i)
         ProceedToNextVariable();
 }
 
 void SerializedDataIterator::ProceedToNextElement()
 {
-    ElemInfo &nextVar = currentElementStack.back();
+    ElemInfo& nextVar = currentElementStack.back();
 
     ++nextVar.nextElem;
     if (nextVar.nextElem >= (int)nextVar.elem->elements.size())
@@ -99,20 +99,20 @@ void SerializedDataIterator::ProceedToNextElement()
     }
     else
     {
-/*        currentElementStack.push_back(ElemInfo());
-        ElemInfo &newVar = currentElementStack.back();
-        newVar.elem = nextVar.elem->elements[nextVar.nextElem];
-        newVar.nextIndex = 0;
-        newVar.nextElem = 0;
-        newVar.count = (newVar.elem->multiplicity == ElemVarying) ? 0 : newVar.elem->count;
-*/
+        /*        currentElementStack.push_back(ElemInfo());
+                ElemInfo &newVar = currentElementStack.back();
+                newVar.elem = nextVar.elem->elements[nextVar.nextElem];
+                newVar.nextIndex = 0;
+                newVar.nextElem = 0;
+                newVar.count = (newVar.elem->multiplicity == ElemVarying) ? 0 : newVar.elem->count;
+        */
         DescendIntoStructure();
     }
 }
 
 void SerializedDataIterator::SetVaryingElemSize(u32 count)
 {
-    ElemInfo &nextVar = currentElementStack.back();
+    ElemInfo& nextVar = currentElementStack.back();
     assert(nextVar.dynamicCountSpecified == false);
     assert(nextVar.elem->varyingCount == true);
     assert(nextVar.nextIndex == 0);
@@ -125,7 +125,7 @@ void SerializedDataIterator::SetVaryingElemSize(u32 count)
 
 void SerializedDataIterator::DescendIntoStructure()
 {
-    ElemInfo &nextVar = currentElementStack.back();
+    ElemInfo& nextVar = currentElementStack.back();
 
     if (nextVar.dynamicCountSpecified == false && nextVar.elem->varyingCount == true)
         return;
@@ -136,7 +136,9 @@ void SerializedDataIterator::DescendIntoStructure()
     newVar.elem = nextVar.elem->elements[nextVar.nextElem];
     newVar.nextIndex = 0;
     newVar.nextElem = 0;
-     newVar.count = (newVar.elem->varyingCount ? 0 : newVar.elem->count); // A varying block? Then the user has to supply multiplicity.
+    newVar.count =
+        (newVar.elem->varyingCount ? 0
+                                   : newVar.elem->count);  // A varying block? Then the user has to supply multiplicity.
     newVar.dynamicCountSpecified = false;
     currentElementStack.push_back(newVar);
 
@@ -152,7 +154,9 @@ void SerializedDataIterator::ResetTraversal()
     newVar.elem = desc.data;
     newVar.nextIndex = 0;
     newVar.nextElem = 0;
-     newVar.count = (newVar.elem->varyingCount ? 0 : newVar.elem->count); // A varying block? Then the user has to supply multiplicity.
+    newVar.count =
+        (newVar.elem->varyingCount ? 0
+                                   : newVar.elem->count);  // A varying block? Then the user has to supply multiplicity.
     newVar.dynamicCountSpecified = false;
     currentElementStack.push_back(newVar);
 
@@ -160,4 +164,4 @@ void SerializedDataIterator::ResetTraversal()
     DescendIntoStructure();
 }
 
-} // ~kNet
+}  // ~kNet

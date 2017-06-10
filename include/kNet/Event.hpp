@@ -3,7 +3,7 @@
 // Author(s):       kNet Authors <https://github.com/juj/kNet>
 //                  iFarbod <>
 //
-// Copyright (c) 2015-2017 CtNorth Team
+// Copyright (c) 2015-2017 Project CTNorth
 //
 // Distributed under the MIT license (See accompanying file LICENSE or copy at
 // https://opensource.org/licenses/MIT)
@@ -22,11 +22,13 @@ namespace kNet
 
 enum EventWaitType
 {
-    EventWaitInvalid, ///< This event is uninitialized.
-    EventWaitDummy, ///< The event to be waited on is a dummy event. Used to keep the index numbers straight, to avoid a O(n) pass through the whole event wait list.
-    EventWaitSignal, ///< The event to be waited on is not a socket-based event, but an application-triggered signal event.
-    EventWaitRead, ///< The event to be waited on is a socket read event.
-    EventWaitWrite ///< The event to be waited on is a socket write event.
+    EventWaitInvalid,  ///< This event is uninitialized.
+    EventWaitDummy,    ///< The event to be waited on is a dummy event. Used to keep the index numbers straight, to avoid
+                       ///a O(n) pass through the whole event wait list.
+    EventWaitSignal,   ///< The event to be waited on is not a socket-based event, but an application-triggered signal
+                       ///event.
+    EventWaitRead,     ///< The event to be waited on is a socket read event.
+    EventWaitWrite     ///< The event to be waited on is a socket write event.
 };
 
 /// Event is an inter-thread synchronization primitive that can be in one of two states: Set or Cleared.
@@ -39,13 +41,12 @@ enum EventWaitType
 
     To create a new event, call \ref kNet::CreateNewEvent CreateNewEvent with the wait type of EventWaitSignal.
 
-    The Event class does not follow RAII or data sharing patterns to avoid thread-safety issues. Therefore it is important
-    to note that:
-    - The default ctor initializes a "null" event - one that is not initialized.
-    - The default copy-ctor copies the event. The two events will be the same, i.e. does not matter which of them to wait or signal.
-    - The default assignment operator also copies the event, but does NOT free up the internal data used by the old event. When
-      assigning over an Event that is not needed any more, call \ref kNet::Event::Close "Close()" on that event.
-    - The default destructor of an Event does NOT delete the event. Before letting the last copy of an Event go out of scope,
+    The Event class does not follow RAII or data sharing patterns to avoid thread-safety issues. Therefore it is
+   important to note that: - The default ctor initializes a "null" event - one that is not initialized. - The default
+   copy-ctor copies the event. The two events will be the same, i.e. does not matter which of them to wait or signal. -
+   The default assignment operator also copies the event, but does NOT free up the internal data used by the old event.
+   When assigning over an Event that is not needed any more, call \ref kNet::Event::Close "Close()" on that event. - The
+   default destructor of an Event does NOT delete the event. Before letting the last copy of an Event go out of scope,
       manually call \ref kNet::Event::Close "Close()" on that Event.
 
     This class represents a WSAEVENT on Windows, and socket or a pipe on unix. */
@@ -55,7 +56,7 @@ public:
     /// Creates a null event. Call Event::Create to initialize the event.
     Event();
     // Does not delete the event. Call Event::Close() when you don't need it anymore.
-//    ~Event();
+    //    ~Event();
 
     /// Initializes the event to a new instance. If the Event was previously initialized, does *not* Close
     /// the old instance.
@@ -83,7 +84,8 @@ public:
     /// was not set before the timeout occurred.
     bool Wait(unsigned long msecs) const;
 
-    /// Returns the underlying type of the event, specifying what kind of system object is being represented by this event.
+    /// Returns the underlying type of the event, specifying what kind of system object is being represented by this
+    /// event.
     EventWaitType Type() const { return type; }
 
 private:
@@ -97,7 +99,7 @@ public:
     explicit Event(WSAEVENT wsaEvent, EventWaitType eventType);
 #else
 public:
-    int fd[2]; // fd[0] is used for reading, fd[1] for writing.
+    int fd[2];  // fd[0] is used for reading, fd[1] for writing.
 
     /// Wraps the given socket file descriptor into this event.
     explicit Event(int /*SOCKET*/ fd, EventWaitType eventType);
@@ -108,4 +110,4 @@ public:
 /// Creates and returns a new event.
 Event CreateNewEvent(EventWaitType type);
 
-} // ~kNet
+}  // ~kNet

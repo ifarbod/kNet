@@ -3,7 +3,7 @@
 // Author(s):       kNet Authors <https://github.com/juj/kNet>
 //                  iFarbod <>
 //
-// Copyright (c) 2015-2017 CtNorth Team
+// Copyright (c) 2015-2017 Project CTNorth
 //
 // Distributed under the MIT license (See accompanying file LICENSE or copy at
 // https://opensource.org/licenses/MIT)
@@ -19,49 +19,45 @@
 namespace kNet
 {
 
-template<typename T>
+template <typename T>
 struct PoolAllocatable
 {
     /// Points to the next item in the lock-free linked list. Do not access or
     /// dereference this variable in client code, as it is used internally by
     /// LockFreePoolAllocator only.
-    T * volatile next;
+    T* volatile next;
 };
 
 /// T must implement PoolAllocatable.
-template<typename T>
+template <typename T>
 class LockFreePoolAllocator
 {
 public:
-    LockFreePoolAllocator()
-    :root(0)
-    {
-    }
+    LockFreePoolAllocator() : root(0) {}
 
-    ~LockFreePoolAllocator()
-    {
-        UnsafeClearAll();
-    }
+    ~LockFreePoolAllocator() { UnsafeClearAll(); }
 
     /// Allocates a new object of type T. Call Free() to deallocate the object.
-    T *New()
+    T* New()
     {
-        // Currently the use of lockfree allocation pool is disabled, since it has a known race condition, documented below.
+        // Currently the use of lockfree allocation pool is disabled, since it has a known race condition, documented
+        // below.
         return new T();
 
         /*
         for(;;)
         {
             T *allocated = root;
-            if (!allocated) // If the root is null, there are no objects in the pool, so we must create new from the runtime heap.
+            if (!allocated) // If the root is null, there are no objects in the pool, so we must create new from the
+        runtime heap.
             {
                 allocated = new T();
                 allocated->next = 0;
                 return allocated;
             }
 
-            ///\bug Note that this function is not thread-safe. Accessing allocated->next may already be dangling if another thread has deleted it.
-            T *newRoot = allocated->next;
+            ///\bug Note that this function is not thread-safe. Accessing allocated->next may already be dangling if
+        another thread has deleted it. T *newRoot = allocated->next;
 
             if (CmpXChgPointer((void**)&root, newRoot, allocated))
             {
@@ -72,24 +68,24 @@ public:
         */
     }
 
-    void Free(T *ptr)
+    void Free(T* ptr)
     {
         delete ptr;
 
         // Currently the use of lockfree allocation pool is disabled, since it has a known race condition.
-/*
-        if (!ptr)
-            return;
+        /*
+                if (!ptr)
+                    return;
 
-        assert(ptr != root);
+                assert(ptr != root);
 
-        for(;;)
-        {
-            ptr->next = root;
-            if (CmpXChgPointer((void**)&root, ptr, ptr->next))
-                return;
-        }
-*/
+                for(;;)
+                {
+                    ptr->next = root;
+                    if (CmpXChgPointer((void**)&root, ptr, ptr->next))
+                        return;
+                }
+        */
     }
 
     /// Deallocates all cached unused nodes in this pool. Thread-safe and lock-free. If you are manually tearing
@@ -97,9 +93,9 @@ public:
     /// UnsafeClearAll(), which ignores compare-and-swap updates.
     void ClearAll()
     {
-        while(root)
+        while (root)
         {
-            T *node = New();
+            T* node = New();
             delete node;
         }
     }
@@ -109,10 +105,10 @@ public:
     void UnsafeClearAll()
     {
         assert(!DebugHasCycle());
-        T *node = root;
-        while(node)
+        T* node = root;
+        while (node)
         {
-            T *next = node->next;
+            T* next = node->next;
             delete node;
             node = next;
         }
@@ -122,11 +118,11 @@ public:
     /// A debugging function that checks whether the underlying linked list has a cycle or not. Not thread-safe!
     bool DebugHasCycle()
     {
-        T *n1 = root;
+        T* n1 = root;
         if (!n1)
             return false;
-        T *n2 = n1->next;
-        while(n2 != 0)
+        T* n2 = n1->next;
+        while (n2 != 0)
         {
             if (n1 == n2)
                 return true;
@@ -144,12 +140,12 @@ public:
     {
         using namespace std;
 
-        T *node = root;
+        T* node = root;
         cout << "Root: 0x" << ios::hex << root << ".Next: " << ios::hex << (root ? root->next : 0) << std::endl;
         int size = 0;
         if (node)
             node = node->next;
-        while(node)
+        while (node)
         {
             cout << "Node: 0x" << ios::hex << node << ".Next: " << ios::hex << (node ? node->next : 0) << std::endl;
             node = node->next;
@@ -159,7 +155,7 @@ public:
     }
 
 private:
-    T * volatile root;
+    T* volatile root;
 };
 
-} // ~kNet
+}  // ~kNet

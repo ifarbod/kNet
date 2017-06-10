@@ -3,7 +3,7 @@
 // Author(s):       kNet Authors <https://github.com/juj/kNet>
 //                  iFarbod <>
 //
-// Copyright (c) 2015-2017 CtNorth Team
+// Copyright (c) 2015-2017 Project CTNorth
 //
 // Distributed under the MIT license (See accompanying file LICENSE or copy at
 // https://opensource.org/licenses/MIT)
@@ -11,16 +11,16 @@
 /** @file Network.cpp
     @brief */
 
-#include <string>
 #include <sstream>
+#include <string>
 
 #include <cassert>
 
 #ifndef _WIN32
-#include <sys/socket.h>
-#include <netinet/in.h>
 #include <arpa/inet.h>
 #include <errno.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
 #include <unistd.h>
 #endif
 
@@ -28,29 +28,31 @@
 
 #include "kNet/Network.hpp"
 
+#include "kNet/NetworkLogging.hpp"
+#include "kNet/NetworkWorkerThread.hpp"
 #include "kNet/TCPMessageConnection.hpp"
 #include "kNet/UDPMessageConnection.hpp"
-#include "kNet/NetworkWorkerThread.hpp"
-#include "kNet/NetworkLogging.hpp"
 
 namespace kNet
 {
 
-const int cMaxTCPSendSize = 25 * 1024 * 1024; // For TCP sockets, there is no specific limit to send(), specify something.
+const int cMaxTCPSendSize =
+    25 * 1024 * 1024;  // For TCP sockets, there is no specific limit to send(), specify something.
 const int cMaxUDPSendSize = 1400;
 
 std::string Network::GetErrorString(int error)
 {
 #ifdef _WIN32
-    void *lpMsgBuf = 0;
+    void* lpMsgBuf = 0;
 
     HRESULT hresult = HRESULT_FROM_WIN32(error);
-    FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-        0, hresult, 0 /*Default language*/, (LPTSTR) &lpMsgBuf, 0, 0);
+    FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, 0,
+        hresult, 0 /*Default language*/, (LPTSTR)&lpMsgBuf, 0, 0);
 
     // Copy message to C++ -style string, since the data need to be freed before return.
     std::stringstream ss;
-    ss << (LPCSTR)lpMsgBuf << "(" << error << ")"; ///\todo Bug: The cast to LPCSTR converts wstr -> str if UNICODE is defined, which will cut out text.
+    ss << (LPCSTR)lpMsgBuf << "(" << error
+       << ")";  ///\todo Bug: The cast to LPCSTR converts wstr -> str if UNICODE is defined, which will cut out text.
     LocalFree(lpMsgBuf);
     return ss.str();
 #else
@@ -119,7 +121,7 @@ void PrintLocalIP()
     }
     KNET_LOG(LogInfo, "Host name is %s", ac);
 
-    struct hostent *phe = gethostbyname(ac);
+    struct hostent* phe = gethostbyname(ac);
     if (phe == 0)
     {
         KNET_LOG(LogError, "Bad host lookup.");
@@ -130,11 +132,11 @@ void PrintLocalIP()
     {
         struct in_addr addr;
         memcpy(&addr, phe->h_addr_list[i], sizeof(struct in_addr));
-        KNET_LOG(LogInfo, "Address %d: %s", i, inet_ntoa(addr)); ///\todo inet_ntoa is deprecated! doesn't handle IPv6!
+        KNET_LOG(LogInfo, "Address %d: %s", i, inet_ntoa(addr));  ///\todo inet_ntoa is deprecated! doesn't handle IPv6!
     }
 }
 
-void Network::PrintAddrInfo(const addrinfo *ptr)
+void Network::PrintAddrInfo(const addrinfo* ptr)
 {
     if (!ptr)
     {
@@ -144,79 +146,79 @@ void Network::PrintAddrInfo(const addrinfo *ptr)
 
     KNET_LOG(LogInfo, "\tFlags: 0x%x\n", ptr->ai_flags);
     KNET_LOG(LogInfo, "\tFamily: ");
-    switch(ptr->ai_family)
+    switch (ptr->ai_family)
     {
-    case AF_UNSPEC:
-        KNET_LOG(LogInfo, "Unspecified\n");
-        break;
-    case AF_INET:
-        KNET_LOG(LogInfo, "AF_INET (IPv4)\n");
-        break;
-    case AF_INET6:
-        KNET_LOG(LogInfo, "AF_INET6 (IPv6)\n");
-        break;
+        case AF_UNSPEC:
+            KNET_LOG(LogInfo, "Unspecified\n");
+            break;
+        case AF_INET:
+            KNET_LOG(LogInfo, "AF_INET (IPv4)\n");
+            break;
+        case AF_INET6:
+            KNET_LOG(LogInfo, "AF_INET6 (IPv6)\n");
+            break;
 #ifdef _WIN32
-    case AF_NETBIOS:
-        KNET_LOG(LogInfo, "AF_NETBIOS (NetBIOS)\n");
-        break;
+        case AF_NETBIOS:
+            KNET_LOG(LogInfo, "AF_NETBIOS (NetBIOS)\n");
+            break;
 #endif
-    default:
-        KNET_LOG(LogInfo, "Other %u\n", ptr->ai_family);
-        break;
+        default:
+            KNET_LOG(LogInfo, "Other %u\n", ptr->ai_family);
+            break;
     }
     KNET_LOG(LogInfo, "\tSocket type: ");
-    switch(ptr->ai_socktype)
+    switch (ptr->ai_socktype)
     {
-    case 0:
-        KNET_LOG(LogInfo, "Unspecified\n");
-        break;
-    case SOCK_STREAM:
-        KNET_LOG(LogInfo, "SOCK_STREAM (stream)\n");
-        break;
-    case SOCK_DGRAM:
-        KNET_LOG(LogInfo, "SOCK_DGRAM (datagram) \n");
-        break;
-    case SOCK_RAW:
-        KNET_LOG(LogInfo, "SOCK_RAW (raw) \n");
-        break;
-    case SOCK_RDM:
-        KNET_LOG(LogInfo, "SOCK_RDM (reliable message datagram)\n");
-        break;
-    case SOCK_SEQPACKET:
-        KNET_LOG(LogInfo, "SOCK_SEQPACKET (pseudo-stream packet)\n");
-        break;
-    default:
-        KNET_LOG(LogInfo, "Other %u\n", ptr->ai_socktype);
-        break;
+        case 0:
+            KNET_LOG(LogInfo, "Unspecified\n");
+            break;
+        case SOCK_STREAM:
+            KNET_LOG(LogInfo, "SOCK_STREAM (stream)\n");
+            break;
+        case SOCK_DGRAM:
+            KNET_LOG(LogInfo, "SOCK_DGRAM (datagram) \n");
+            break;
+        case SOCK_RAW:
+            KNET_LOG(LogInfo, "SOCK_RAW (raw) \n");
+            break;
+        case SOCK_RDM:
+            KNET_LOG(LogInfo, "SOCK_RDM (reliable message datagram)\n");
+            break;
+        case SOCK_SEQPACKET:
+            KNET_LOG(LogInfo, "SOCK_SEQPACKET (pseudo-stream packet)\n");
+            break;
+        default:
+            KNET_LOG(LogInfo, "Other %u\n", ptr->ai_socktype);
+            break;
     }
     KNET_LOG(LogInfo, "\tProtocol: ");
-    switch(ptr->ai_protocol)
+    switch (ptr->ai_protocol)
     {
-    case 0:
-        KNET_LOG(LogInfo, "Unspecified\n");
-        break;
-    case IPPROTO_TCP:
-        KNET_LOG(LogInfo, "IPPROTO_TCP (TCP)\n");
-        break;
-    case IPPROTO_UDP:
-        KNET_LOG(LogInfo, "IPPROTO_UDP (UDP) \n");
-        break;
-    default:
-        KNET_LOG(LogInfo, "Other %u\n", ptr->ai_protocol);
-        break;
+        case 0:
+            KNET_LOG(LogInfo, "Unspecified\n");
+            break;
+        case IPPROTO_TCP:
+            KNET_LOG(LogInfo, "IPPROTO_TCP (TCP)\n");
+            break;
+        case IPPROTO_UDP:
+            KNET_LOG(LogInfo, "IPPROTO_UDP (UDP) \n");
+            break;
+        default:
+            KNET_LOG(LogInfo, "Other %u\n", ptr->ai_protocol);
+            break;
     }
     KNET_LOG(LogInfo, "\tLength of this sockaddr: %d\n", (int)ptr->ai_addrlen);
     KNET_LOG(LogInfo, "\tCanonical name: %s\n", ptr->ai_canonname);
 
     char address[256];
-    sprintf(address, "%d.%d.%d.%d",
-        (unsigned int)(unsigned char)ptr->ai_addr->sa_data[2], (unsigned int)(unsigned char)ptr->ai_addr->sa_data[3],
-        (unsigned int)(unsigned char)ptr->ai_addr->sa_data[4], (unsigned int)(unsigned char)ptr->ai_addr->sa_data[5]);
+    sprintf(address, "%d.%d.%d.%d", (unsigned int)(unsigned char)ptr->ai_addr->sa_data[2],
+        (unsigned int)(unsigned char)ptr->ai_addr->sa_data[3], (unsigned int)(unsigned char)ptr->ai_addr->sa_data[4],
+        (unsigned int)(unsigned char)ptr->ai_addr->sa_data[5]);
 
     KNET_LOG(LogInfo, "Address of this sockaddr: %s.\n", address);
 }
 
-void Network::PrintHostNameInfo(const char *hostname, const char *port)
+void Network::PrintHostNameInfo(const char* hostname, const char* port)
 {
     addrinfo hints;
 
@@ -233,7 +235,7 @@ void Network::PrintHostNameInfo(const char *hostname, const char *port)
     // the result variable will hold a linked list
     // of addrinfo structures containing response
     // information
-    addrinfo *result = NULL;
+    addrinfo* result = NULL;
     unsigned long dwRetval = (unsigned long)getaddrinfo(hostname, port, &hints, &result);
     if (dwRetval != 0)
     {
@@ -246,7 +248,7 @@ void Network::PrintHostNameInfo(const char *hostname, const char *port)
     int i = 1;
 
     // Retrieve each address and print out the hex bytes
-    for(addrinfo *ptr = result; ptr != NULL; ptr = ptr->ai_next)
+    for (addrinfo* ptr = result; ptr != NULL; ptr = ptr->ai_next)
     {
         KNET_LOG(LogInfo, "getaddrinfo response %d", i++);
         PrintAddrInfo(ptr);
@@ -261,7 +263,7 @@ void Network::Init()
 {
 #ifdef _WIN32
     // Initialize Winsock
-    int result = WSAStartup(MAKEWORD(2,2), &wsaData);
+    int result = WSAStartup(MAKEWORD(2, 2), &wsaData);
     if (result != 0)
     {
         KNET_LOG(LogError, "Network::Init: WSAStartup failed: %s!", GetErrorString(result).c_str());
@@ -272,7 +274,8 @@ void Network::Init()
     // Fetch the local system host name for later use. The local address is cached here
     // to avoid multiple queries to namespace providers.
     char str[256];
-    int ret = gethostname(str, 256); // For more information, see http://msdn.microsoft.com/en-us/library/ms738527(VS.85).aspx .
+    int ret = gethostname(
+        str, 256);  // For more information, see http://msdn.microsoft.com/en-us/library/ms738527(VS.85).aspx .
     if (ret == 0)
     {
         localHostName = str;
@@ -280,48 +283,49 @@ void Network::Init()
     }
     else
     {
-        KNET_LOG(LogError, "Network::Init: gethostname failed! Error: %s. Using 'localhost' as the local host name", GetLastErrorString().c_str());
+        KNET_LOG(LogError, "Network::Init: gethostname failed! Error: %s. Using 'localhost' as the local host name",
+            GetLastErrorString().c_str());
         localHostName = "localhost";
     }
 }
 
-NetworkWorkerThread *Network::GetOrCreateWorkerThread()
+NetworkWorkerThread* Network::GetOrCreateWorkerThread()
 {
     static const int maxConnectionsPerThread = 8;
 
     // Find an existing thread with sufficiently low load.
-    for(size_t i = 0; i < workerThreads.size(); ++i)
+    for (size_t i = 0; i < workerThreads.size(); ++i)
         if (workerThreads[i]->NumConnections() + workerThreads[i]->NumServers() < maxConnectionsPerThread)
             return workerThreads[i];
 
     // No appropriate thread found. Create a new one.
-    NetworkWorkerThread *workerThread = new NetworkWorkerThread();
+    NetworkWorkerThread* workerThread = new NetworkWorkerThread();
     workerThread->StartThread();
     workerThreads.push_back(workerThread);
     KNET_LOG(LogInfo, "Created a new NetworkWorkerThread. There are now %d worker threads.", (int)workerThreads.size());
     return workerThread;
 }
 
-void Network::AssignConnectionToWorkerThread(MessageConnection *connection)
+void Network::AssignConnectionToWorkerThread(MessageConnection* connection)
 {
-    NetworkWorkerThread *workerThread = GetOrCreateWorkerThread();
+    NetworkWorkerThread* workerThread = GetOrCreateWorkerThread();
     connection->SetWorkerThread(workerThread);
     workerThread->AddConnection(connection);
 }
 
-void Network::AssignServerToWorkerThread(NetworkServer *server)
+void Network::AssignServerToWorkerThread(NetworkServer* server)
 {
-    NetworkWorkerThread *workerThread = GetOrCreateWorkerThread();
+    NetworkWorkerThread* workerThread = GetOrCreateWorkerThread();
     server->SetWorkerThread(workerThread);
     workerThread->AddServer(server);
 }
 
-void Network::RemoveConnectionFromItsWorkerThread(MessageConnection *connection)
+void Network::RemoveConnectionFromItsWorkerThread(MessageConnection* connection)
 {
     if (!connection)
         return;
 
-    NetworkWorkerThread *workerThread = connection->WorkerThread();
+    NetworkWorkerThread* workerThread = connection->WorkerThread();
     if (workerThread)
     {
         workerThread->RemoveConnection(connection);
@@ -332,12 +336,12 @@ void Network::RemoveConnectionFromItsWorkerThread(MessageConnection *connection)
     }
 }
 
-void Network::RemoveServerFromItsWorkerThread(NetworkServer *server)
+void Network::RemoveServerFromItsWorkerThread(NetworkServer* server)
 {
     if (!server)
         return;
 
-    NetworkWorkerThread *workerThread = server->WorkerThread();
+    NetworkWorkerThread* workerThread = server->WorkerThread();
     if (workerThread)
     {
         workerThread->RemoveServer(server);
@@ -348,34 +352,41 @@ void Network::RemoveServerFromItsWorkerThread(NetworkServer *server)
     }
 }
 
-void Network::CloseWorkerThread(NetworkWorkerThread *workerThread)
+void Network::CloseWorkerThread(NetworkWorkerThread* workerThread)
 {
     if (!workerThread)
         return;
 
     // We (should) never close a worker thread until we have first removed all the connections and servers it handles.
     if (workerThread->NumConnections() + workerThread->NumServers() > 0)
-        KNET_LOG(LogError, "Warning: Closing a worker thread %p when it still has %d connections and %d servers to handle.", workerThread, workerThread->NumConnections(), workerThread->NumServers());
+        KNET_LOG(LogError,
+            "Warning: Closing a worker thread %p when it still has %d connections and %d servers to handle.",
+            workerThread, workerThread->NumConnections(), workerThread->NumServers());
 
-    for(size_t i = 0; i < workerThreads.size(); ++i)
+    for (size_t i = 0; i < workerThreads.size(); ++i)
         if (workerThreads[i] == workerThread)
         {
             // Remove the thread pointer from internal list.
-            std::swap(workerThreads[i], workerThreads[workerThreads.size()-1]);
+            std::swap(workerThreads[i], workerThreads[workerThreads.size() - 1]);
             workerThreads.pop_back();
 
             workerThread->StopThread();
-            KNET_LOG(LogInfo, "Deleted a NetworkWorkerThread. There are now %d worker threads left.", (int)workerThreads.size());
+            KNET_LOG(LogInfo, "Deleted a NetworkWorkerThread. There are now %d worker threads left.",
+                (int)workerThreads.size());
             delete workerThread;
             return;
         }
 
-    KNET_LOG(LogError, "Network::CloseWorkerThread: Asked to close worker thread %p, but no such thread is tracked by this Network object! Ignoring the request.", workerThread);
+    KNET_LOG(LogError,
+        "Network::CloseWorkerThread: Asked to close worker thread %p, but no such thread is tracked by this Network "
+        "object! Ignoring the request.",
+        workerThread);
 }
 
-NetworkServer *Network::StartServer(unsigned short port, SocketTransportLayer transport, INetworkServerListener *serverListener, bool allowAddressReuse)
+NetworkServer* Network::StartServer(
+    unsigned short port, SocketTransportLayer transport, INetworkServerListener* serverListener, bool allowAddressReuse)
 {
-    Socket *listenSock = OpenListenSocket(port, transport, allowAddressReuse);
+    Socket* listenSock = OpenListenSocket(port, transport, allowAddressReuse);
     if (listenSock == 0)
     {
         KNET_LOG(LogError, "Failed to start server. Could not open listen port to %d using %s.", (int)port,
@@ -383,7 +394,7 @@ NetworkServer *Network::StartServer(unsigned short port, SocketTransportLayer tr
         return 0;
     }
 
-    std::vector<Socket *> listenSockets;
+    std::vector<Socket*> listenSockets;
     listenSockets.push_back(listenSock);
 
     server = new NetworkServer(this, listenSockets);
@@ -396,20 +407,21 @@ NetworkServer *Network::StartServer(unsigned short port, SocketTransportLayer tr
     return server;
 }
 
-NetworkServer *Network::StartServer(const std::vector<std::pair<unsigned short, SocketTransportLayer> > &listenPorts,
-    INetworkServerListener *serverListener, bool allowAddressReuse)
+NetworkServer* Network::StartServer(const std::vector<std::pair<unsigned short, SocketTransportLayer>>& listenPorts,
+    INetworkServerListener* serverListener, bool allowAddressReuse)
 {
     if (listenPorts.empty())
     {
-        KNET_LOG(LogError, "Failed to start server, since you did not provide a list of ports to listen to in Network::StartServer()!");
+        KNET_LOG(LogError, "Failed to start server, since you did not provide a list of ports to listen to in "
+                           "Network::StartServer()!");
         return 0;
     }
 
-    std::vector<Socket *> listenSockets;
+    std::vector<Socket*> listenSockets;
 
-    for(size_t i = 0; i < listenPorts.size(); ++i)
+    for (size_t i = 0; i < listenPorts.size(); ++i)
     {
-        Socket *listenSock = OpenListenSocket(listenPorts[i].first, listenPorts[i].second, allowAddressReuse);
+        Socket* listenSock = OpenListenSocket(listenPorts[i].first, listenPorts[i].second, allowAddressReuse);
         if (listenSock)
             listenSockets.push_back(listenSock);
     }
@@ -429,7 +441,7 @@ NetworkServer *Network::StartServer(const std::vector<std::pair<unsigned short, 
     {
         std::stringstream ss;
         ss << "UDP ";
-        for(size_t i = 0; i < listenSockets.size(); ++i)
+        for (size_t i = 0; i < listenSockets.size(); ++i)
             if (listenSockets[i]->TransportLayer() == SocketOverUDP)
                 ss << listenSockets[i]->LocalPort() << " ";
         KNET_LOG(LogInfo, ss.str().c_str());
@@ -437,7 +449,7 @@ NetworkServer *Network::StartServer(const std::vector<std::pair<unsigned short, 
     {
         std::stringstream ss;
         ss << "TCP ";
-        for(size_t i = 0; i < listenSockets.size(); ++i)
+        for (size_t i = 0; i < listenSockets.size(); ++i)
             if (listenSockets[i]->TransportLayer() == SocketOverTCP)
                 ss << listenSockets[i]->LocalPort() << " ";
         KNET_LOG(LogInfo, ss.str().c_str());
@@ -458,7 +470,7 @@ void Network::StopServer()
     KNET_LOG(LogVerbose, "Network::StopServer: Deinitialized NetworkServer.");
 }
 
-void Network::DeleteSocket(Socket *socket)
+void Network::DeleteSocket(Socket* socket)
 {
     if (!socket)
     {
@@ -466,7 +478,7 @@ void Network::DeleteSocket(Socket *socket)
         return;
     }
 
-    for(std::list<Socket>::iterator iter = sockets.begin(); iter != sockets.end(); ++iter)
+    for (std::list<Socket>::iterator iter = sockets.begin(); iter != sockets.end(); ++iter)
         if (&*iter == socket)
         {
             socket->Close();
@@ -479,7 +491,7 @@ void Network::DeleteSocket(Socket *socket)
     KNET_LOG(LogError, "Network::DeleteSocket: Tried to free a nonexisting socket %p!", socket);
 }
 
-void Network::CloseConnection(MessageConnection *connection)
+void Network::CloseConnection(MessageConnection* connection)
 {
     KNET_LOG(LogVerbose, "Network::CloseConnection: Closing down connection %p.", connection);
     if (!connection)
@@ -499,27 +511,28 @@ void Network::DeInit()
     PolledTimer timer;
 
     // Kill all connections.
-    while(!connections.empty())
+    while (!connections.empty())
     {
-        MessageConnection *connection = *connections.begin();
-        CloseConnection(connection); // CloseConnection erases connection from the connections list, so this loop terminates.
+        MessageConnection* connection = *connections.begin();
+        CloseConnection(
+            connection);  // CloseConnection erases connection from the connections list, so this loop terminates.
     }
 
     // Kill the server, if it's running.
     StopServer();
 
     // Kill all worker threads.
-    while(!workerThreads.empty())
-        CloseWorkerThread(workerThreads.front()); // Erases the item from workerThreads, so this loop terminates.
+    while (!workerThreads.empty())
+        CloseWorkerThread(workerThreads.front());  // Erases the item from workerThreads, so this loop terminates.
 
     // Clean up any sockets that might be remaining.
-    while(!sockets.empty())
+    while (!sockets.empty())
     {
         sockets.front().Close();
         sockets.pop_front();
     }
 
-    // Deinitialize network subsystem.
+// Deinitialize network subsystem.
 #ifdef _WIN32
     WSACleanup();
 #endif
@@ -527,14 +540,14 @@ void Network::DeInit()
     KNET_LOG(LogWaits, "Network::DeInit: Deinitialized kNet Network object, took %f msecs.", timer.MSecsElapsed());
 }
 
-void Network::NewMessageConnectionCreated(MessageConnection *connection)
+void Network::NewMessageConnectionCreated(MessageConnection* connection)
 {
     connections.insert(connection);
 }
 
-Socket *Network::OpenListenSocket(unsigned short port, SocketTransportLayer transport, bool allowAddressReuse)
+Socket* Network::OpenListenSocket(unsigned short port, SocketTransportLayer transport, bool allowAddressReuse)
 {
-    addrinfo *result = NULL;
+    addrinfo* result = NULL;
     addrinfo hints;
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET;
@@ -564,12 +577,12 @@ Socket *Network::OpenListenSocket(unsigned short port, SocketTransportLayer tran
 
     if (allowAddressReuse)
     {
-        // Allow other sockets to be bound to this address after this.
-        // (Possibly unsecure, only enable for development purposes - to avoid having to wait for the server listen socket
-        //  to time out if the server crashes.)
+// Allow other sockets to be bound to this address after this.
+// (Possibly unsecure, only enable for development purposes - to avoid having to wait for the server listen socket
+//  to time out if the server crashes.)
 #ifdef _WIN32
         BOOL val = TRUE;
-        ret = setsockopt(listenSocket, SOL_SOCKET, SO_REUSEADDR, (const char *)&val, sizeof(val));
+        ret = setsockopt(listenSocket, SOL_SOCKET, SO_REUSEADDR, (const char*)&val, sizeof(val));
 #else
         int val = 1;
         ret = setsockopt(listenSocket, SOL_SOCKET, SO_REUSEADDR, &val, sizeof(val));
@@ -583,7 +596,8 @@ Socket *Network::OpenListenSocket(unsigned short port, SocketTransportLayer tran
 
     // Setup the listening socket - bind it to a local port.
     // If we are setting up a TCP socket, the socket will be only for listening and accepting incoming connections.
-    // If we are setting up an UDP socket, all connection initialization and data transfers will be managed through this socket.
+    // If we are setting up an UDP socket, all connection initialization and data transfers will be managed through this
+    // socket.
     ret = bind(listenSocket, result->ai_addr, (int)result->ai_addrlen);
     if (ret == KNET_SOCKET_ERROR)
     {
@@ -611,21 +625,23 @@ Socket *Network::OpenListenSocket(unsigned short port, SocketTransportLayer tran
 
     EndPoint localEndPoint = EndPoint::FromSockAddrIn(localAddress);
 
-    // We are starting up a server listen socket, which is not bound to an address. Use null address for the remote endpoint.
+    // We are starting up a server listen socket, which is not bound to an address. Use null address for the remote
+    // endpoint.
     EndPoint remoteEndPoint;
     remoteEndPoint.Reset();
 
     const size_t maxSendSize = (transport == SocketOverTCP ? cMaxTCPSendSize : cMaxUDPSendSize);
-    sockets.push_back(Socket(listenSocket, localEndPoint, localHostName.c_str(), remoteEndPoint, "", transport, ServerListenSocket, maxSendSize));
-    Socket *listenSock = &sockets.back();
+    sockets.push_back(Socket(listenSocket, localEndPoint, localHostName.c_str(), remoteEndPoint, "", transport,
+        ServerListenSocket, maxSendSize));
+    Socket* listenSock = &sockets.back();
     listenSock->SetBlocking(false);
 
     return listenSock;
 }
 
-Socket *Network::ConnectSocket(const char *address, unsigned short port, SocketTransportLayer transport)
+Socket* Network::ConnectSocket(const char* address, unsigned short port, SocketTransportLayer transport)
 {
-    addrinfo *result = NULL;
+    addrinfo* result = NULL;
     addrinfo hints;
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET;
@@ -642,8 +658,8 @@ Socket *Network::ConnectSocket(const char *address, unsigned short port, SocketT
     }
 
 #ifdef _WIN32
-    SOCKET connectSocket = WSASocket(result->ai_family, result->ai_socktype, result->ai_protocol,
-        NULL, 0, WSA_FLAG_OVERLAPPED);
+    SOCKET connectSocket =
+        WSASocket(result->ai_family, result->ai_socktype, result->ai_protocol, NULL, 0, WSA_FLAG_OVERLAPPED);
 #else
     SOCKET connectSocket = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
     KNET_LOG(LogInfo, "A call to socket() returned a new socket 0x%8X.", (unsigned int)connectSocket);
@@ -655,7 +671,7 @@ Socket *Network::ConnectSocket(const char *address, unsigned short port, SocketT
         return 0;
     }
 
-    // Connect to server.
+// Connect to server.
 #ifdef _WIN32
     ret = WSAConnect(connectSocket, result->ai_addr, (int)result->ai_addrlen, 0, 0, 0, 0);
 #else
@@ -681,7 +697,7 @@ Socket *Network::ConnectSocket(const char *address, unsigned short port, SocketT
     socklen_t socknamelen = sizeof(sockname);
     ret = getsockname(connectSocket, (sockaddr*)&sockname, &socknamelen);
     if (ret == 0)
-         localEndPoint = EndPoint::FromSockAddrIn(sockname);
+        localEndPoint = EndPoint::FromSockAddrIn(sockname);
     else
         KNET_LOG(LogError, "Network::ConnectSocket: getsockname failed: %s!", Network::GetLastErrorString().c_str());
 
@@ -697,27 +713,29 @@ Socket *Network::ConnectSocket(const char *address, unsigned short port, SocketT
     std::string remoteHostName = remoteEndPoint.IPToString();
 
     const size_t maxSendSize = (transport == SocketOverTCP) ? cMaxTCPSendSize : cMaxUDPSendSize;
-    Socket socket(connectSocket, localEndPoint, localHostName.c_str(), remoteEndPoint, remoteHostName.c_str(), transport, ClientSocket, maxSendSize);
+    Socket socket(connectSocket, localEndPoint, localHostName.c_str(), remoteEndPoint, remoteHostName.c_str(),
+        transport, ClientSocket, maxSendSize);
 
     socket.SetBlocking(false);
     sockets.push_back(socket);
 
-    Socket *sock = &sockets.back();
+    Socket* sock = &sockets.back();
 
     return sock;
 }
 
-Ptr(MessageConnection) Network::Connect(const char *address, unsigned short port,
-    SocketTransportLayer transport, IMessageHandler *messageHandler, Datagram *connectMessage)
+Ptr(MessageConnection) Network::Connect(const char* address, unsigned short port, SocketTransportLayer transport,
+    IMessageHandler* messageHandler, Datagram* connectMessage)
 {
-    Socket *socket = ConnectSocket(address, port, transport);
+    Socket* socket = ConnectSocket(address, port, transport);
     if (!socket)
         return 0;
 
     if (transport == SocketOverUDP)
     {
         SendUDPConnectDatagram(*socket, connectMessage);
-        KNET_LOG(LogInfo, "Network::Connect: Sent a UDP Connection Start datagram to to %s.", socket->ToString().c_str());
+        KNET_LOG(
+            LogInfo, "Network::Connect: Sent a UDP Connection Start datagram to to %s.", socket->ToString().c_str());
     }
     else
         KNET_LOG(LogInfo, "Network::Connect: Connected a TCP socket to %s.", socket->ToString().c_str());
@@ -735,7 +753,8 @@ Ptr(MessageConnection) Network::Connect(const char *address, unsigned short port
     return connection;
 }
 
-Socket *Network::CreateUDPSlaveSocket(Socket *serverListenSocket, const EndPoint &remoteEndPoint, const char *remoteHostName)
+Socket* Network::CreateUDPSlaveSocket(
+    Socket* serverListenSocket, const EndPoint& remoteEndPoint, const char* remoteHostName)
 {
     if (!serverListenSocket)
     {
@@ -746,32 +765,34 @@ Socket *Network::CreateUDPSlaveSocket(Socket *serverListenSocket, const EndPoint
     SOCKET udpSocket = serverListenSocket->GetSocketHandle();
     if (udpSocket == INVALID_SOCKET)
     {
-        KNET_LOG(LogError, "Network::CreateUDPSlaveSocket called with a UDP server socket with invalid internal socket handle!");
+        KNET_LOG(LogError,
+            "Network::CreateUDPSlaveSocket called with a UDP server socket with invalid internal socket handle!");
         return 0;
     }
 
-    sockets.push_back(Socket(udpSocket, serverListenSocket->LocalEndPoint(),
-        serverListenSocket->LocalAddress(), remoteEndPoint, remoteHostName, SocketOverUDP, ServerClientSocket, cMaxUDPSendSize));
-    Socket *socket = &sockets.back();
+    sockets.push_back(Socket(udpSocket, serverListenSocket->LocalEndPoint(), serverListenSocket->LocalAddress(),
+        remoteEndPoint, remoteHostName, SocketOverUDP, ServerClientSocket, cMaxUDPSendSize));
+    Socket* socket = &sockets.back();
     socket->SetBlocking(false);
 
     KNET_LOG(LogInfo, "Network::CreateUDPSlaveSocket: Connected an UDP socket to %s.", socket->ToString().c_str());
     return socket;
 }
 
-Socket *Network::StoreSocket(const Socket &cp)
+Socket* Network::StoreSocket(const Socket& cp)
 {
     sockets.push_back(cp);
     return &sockets.back();
 }
 
-void Network::SendUDPConnectDatagram(Socket &socket, Datagram *connectMessage)
+void Network::SendUDPConnectDatagram(Socket& socket, Datagram* connectMessage)
 {
     const int connectMessageSize = connectMessage ? connectMessage->size : 8;
-    OverlappedTransferBuffer *sendData = socket.BeginSend(connectMessageSize);
+    OverlappedTransferBuffer* sendData = socket.BeginSend(connectMessageSize);
     if (!sendData)
     {
-        KNET_LOG(LogError, "Network::SendUDPConnectDatagram: socket.BeginSend failed! Cannot send UDP connection datagram!");
+        KNET_LOG(
+            LogError, "Network::SendUDPConnectDatagram: socket.BeginSend failed! Cannot send UDP connection datagram!");
         return;
     }
     sendData->bytesContains = connectMessageSize;
@@ -779,15 +800,17 @@ void Network::SendUDPConnectDatagram(Socket &socket, Datagram *connectMessage)
     {
         ///\todo Craft the proper connection attempt datagram.
         memcpy(sendData->buffer.buf, connectMessage->data, sendData->buffer.len);
-        KNET_LOG(LogVerbose, "Network::SendUDPConnectDatagram: Sending UDP connect message of size %d.", (int)sendData->buffer.len);
+        KNET_LOG(LogVerbose, "Network::SendUDPConnectDatagram: Sending UDP connect message of size %d.",
+            (int)sendData->buffer.len);
     }
     else
     {
         ///\todo Craft the proper connection attempt datagram.
         memset(sendData->buffer.buf, 0, sendData->buffer.len);
-        KNET_LOG(LogVerbose, "Network::SendUDPConnectDatagram: Sending null UDP connect message of size %d.", (int)sendData->buffer.len);
+        KNET_LOG(LogVerbose, "Network::SendUDPConnectDatagram: Sending null UDP connect message of size %d.",
+            (int)sendData->buffer.len);
     }
     socket.EndSend(sendData);
 }
 
-} // ~kNet
+}  // ~kNet

@@ -3,7 +3,7 @@
 // Author(s):       kNet Authors <https://github.com/juj/kNet>
 //                  iFarbod <>
 //
-// Copyright (c) 2015-2017 CtNorth Team
+// Copyright (c) 2015-2017 Project CTNorth
 //
 // Distributed under the MIT license (See accompanying file LICENSE or copy at
 // https://opensource.org/licenses/MIT)
@@ -22,22 +22,12 @@ class PolledTimer
 {
 public:
     /// The default ctor starts the timer when the object is created.
-    PolledTimer():enabled(false)
-    {
-        startTime = Clock::Tick();
-    }
+    PolledTimer() : enabled(false) { startTime = Clock::Tick(); }
 
-    explicit PolledTimer(float msecs)
-    :enabled(false)
-    {
-        StartMSecs(msecs);
-    }
+    explicit PolledTimer(float msecs) : enabled(false) { StartMSecs(msecs); }
 
     /// Starts the timer in a non-periodic mode, to go off once in the given amount of milliseconds.
-    void StartMSecs(float msecs)
-    {
-        StartTicks((tick_t)(Clock::TicksPerSec() * (msecs / 1000.f)));
-    }
+    void StartMSecs(float msecs) { StartTicks((tick_t)(Clock::TicksPerSec() * (msecs / 1000.f))); }
 
     /// Starts the timer in a non-periodic mode, to go off once in the given amount of high-precision Clock ticks.
     void StartTicks(tick_t ticks)
@@ -47,39 +37,24 @@ public:
         enabled = true;
     }
 
-    void Stop()
-    {
-        enabled = false;
-    }
+    void Stop() { enabled = false; }
 
-    void Reset()
-    {
-        Stop();
-    }
+    void Reset() { Stop(); }
 
     /// Returns the amount of time in ticks this timer has been running.
-    tick_t TicksElapsed() const
-    {
-        return Clock::Tick() - startTime;
-    }
+    tick_t TicksElapsed() const { return Clock::Tick() - startTime; }
 
-    float MSecsElapsed() const
-    {
-        return Clock::TicksToMillisecondsF(TicksElapsed());
-    }
+    float MSecsElapsed() const { return Clock::TicksToMillisecondsF(TicksElapsed()); }
 
     /// Starts the timer from zero to run upwards without a target period, i.e. the timer will never go off,
     /// but will only report TicksElapsed/MSecsElapsed values.
     void Start()
     {
-        enabled = false; // The target-timer is disabled.
-        startTime = Clock::Tick(); // Start counting from now.
+        enabled = false;            // The target-timer is disabled.
+        startTime = Clock::Tick();  // Start counting from now.
     }
 
-    bool Enabled() const
-    {
-        return enabled;
-    }
+    bool Enabled() const { return enabled; }
 
     /// Tests whether the timer has gone off, and resets it as well.
     /// Returns true if the timer has elapsed, false otherwise.
@@ -95,10 +70,7 @@ public:
         return false;
     }
 
-    bool TriggeredOrNotRunning()
-    {
-        return Test() || !Enabled();
-    }
+    bool TriggeredOrNotRunning() { return Test() || !Enabled(); }
 
     /// @return The number of ticks left until the timer elapses, or (tick_t)-1 if the timer is not active.
     tick_t TicksLeft() const
@@ -134,14 +106,15 @@ public:
             return;
 
         tick_t timeLeft = TicksLeft();
-        while(timeLeft > 0)
+        while (timeLeft > 0)
         {
             if (timeLeft > Clock::TicksPerMillisecond())
             {
                 float msecs = Clock::TicksToMillisecondsF(timeLeft);
                 Clock::Sleep((int)msecs);
             }
-            else // If there's less than one ms left, we use spinwait to return precisely as near to the correct tick as possible.
+            else  // If there's less than one ms left, we use spinwait to return precisely as near to the correct tick
+                  // as possible.
             {
                 SpinWait();
                 return;
@@ -153,7 +126,7 @@ public:
     /// Waits in an empty loop until the timer elapses. Will cause the the CPU use to go to max.
     void SpinWait()
     {
-        while(enabled && TicksLeft() > 0)
+        while (enabled && TicksLeft() > 0)
             ;
     }
 
@@ -165,5 +138,4 @@ private:
     tick_t startTime;
 };
 
-} // ~kNet
-
+}  // ~kNet

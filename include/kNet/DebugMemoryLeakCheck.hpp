@@ -3,7 +3,7 @@
 // Author(s):       kNet Authors <https://github.com/juj/kNet>
 //                  iFarbod <>
 //
-// Copyright (c) 2015-2017 CtNorth Team
+// Copyright (c) 2015-2017 Project CTNorth
 //
 // Distributed under the MIT license (See accompanying file LICENSE or copy at
 // https://opensource.org/licenses/MIT)
@@ -15,8 +15,8 @@
 
 #if defined(_MSC_VER) && defined(_DEBUG) && defined(KNET_MEMORY_LEAK_CHECK)
 
-#include <new>
 #include <crtdbg.h>
+#include <new>
 
 // On MSVC2008, include these files beforehand to avoid compilation errors from our operator new redefine.
 #if _MSC_VER == 1500
@@ -28,27 +28,27 @@
 #define _CRTDBG_MAP_ALLOC
 #endif
 
-__forceinline void *operator new(size_t size, const char *file, int line)
+__forceinline void* operator new(size_t size, const char* file, int line)
 {
     return _malloc_dbg(size, _NORMAL_BLOCK, file, line);
 }
 
-__forceinline void *operator new[](size_t size, const char *file, int line)
+__forceinline void* operator new[](size_t size, const char* file, int line)
 {
     return _malloc_dbg(size, _NORMAL_BLOCK, file, line);
 }
 
-__forceinline void operator delete(void *ptr, const char *, int)
+__forceinline void operator delete(void* ptr, const char*, int)
 {
     _free_dbg(ptr, _NORMAL_BLOCK);
 }
 
-__forceinline void operator delete[](void *ptr, const char *, int)
+__forceinline void operator delete[](void* ptr, const char*, int)
 {
     _free_dbg(ptr, _NORMAL_BLOCK);
 }
 
-__forceinline void *operator new(size_t size)
+__forceinline void* operator new(size_t size)
 {
 #ifdef DEBUG_CPP_NAME
     return _malloc_dbg(size, _NORMAL_BLOCK, DEBUG_CPP_NAME, 1);
@@ -57,7 +57,7 @@ __forceinline void *operator new(size_t size)
 #endif
 }
 
-__forceinline void *operator new[](size_t size)
+__forceinline void* operator new[](size_t size)
 {
 #ifdef DEBUG_CPP_NAME
     return _malloc_dbg(size, _NORMAL_BLOCK, DEBUG_CPP_NAME " new[]", 1);
@@ -66,12 +66,12 @@ __forceinline void *operator new[](size_t size)
 #endif
 }
 
-__forceinline void operator delete(void *ptr)
+__forceinline void operator delete(void* ptr)
 {
     _free_dbg(ptr, _NORMAL_BLOCK);
 }
 
-__forceinline void operator delete[](void *ptr)
+__forceinline void operator delete[](void* ptr)
 {
     _free_dbg(ptr, _NORMAL_BLOCK);
 }
@@ -79,4 +79,3 @@ __forceinline void operator delete[](void *ptr)
 #define new new (__FILE__, __LINE__)
 
 #endif
-

@@ -3,7 +3,7 @@
 // Author(s):       kNet Authors <https://github.com/juj/kNet>
 //                  iFarbod <>
 //
-// Copyright (c) 2015-2017 CtNorth Team
+// Copyright (c) 2015-2017 Project CTNorth
 //
 // Distributed under the MIT license (See accompanying file LICENSE or copy at
 // https://opensource.org/licenses/MIT)
@@ -11,14 +11,14 @@
 /** @file DataSerializer.cpp
     @brief */
 
+#include <cmath>
 #include <cstring>
 #include <sstream>
-#include <cmath>
 
 #include "kNet/DebugMemoryLeakCheck.hpp"
 
-#include "kNet/DataSerializer.hpp"
 #include "kNet/BitOps.hpp"
+#include "kNet/DataSerializer.hpp"
 
 namespace kNet
 {
@@ -35,7 +35,7 @@ DataSerializer::DataSerializer(size_t maxBytes_)
     ResetFill();
 }
 
-DataSerializer::DataSerializer(size_t maxBytes_, const SerializedMessageDesc *msgTemplate)
+DataSerializer::DataSerializer(size_t maxBytes_, const SerializedMessageDesc* msgTemplate)
 {
     assert(maxBytes_ > 0);
     assert(msgTemplate != 0);
@@ -50,16 +50,13 @@ DataSerializer::DataSerializer(size_t maxBytes_, const SerializedMessageDesc *ms
     ResetFill();
 }
 
-DataSerializer::DataSerializer(char *data_, size_t maxBytes_) :
-    data(data_),
-    maxBytes(maxBytes_)
+DataSerializer::DataSerializer(char* data_, size_t maxBytes_) : data(data_), maxBytes(maxBytes_)
 {
     ResetFill();
 }
 
-DataSerializer::DataSerializer(char *data_, size_t maxBytes_, const SerializedMessageDesc *msgTemplate) :
-    data(data_),
-    maxBytes(maxBytes_)
+DataSerializer::DataSerializer(char* data_, size_t maxBytes_, const SerializedMessageDesc* msgTemplate)
+    : data(data_), maxBytes(maxBytes_)
 {
     assert(msgTemplate != 0);
 
@@ -67,7 +64,7 @@ DataSerializer::DataSerializer(char *data_, size_t maxBytes_, const SerializedMe
     ResetFill();
 }
 
-DataSerializer::DataSerializer(std::vector<char> &data_, size_t maxBytes_)
+DataSerializer::DataSerializer(std::vector<char>& data_, size_t maxBytes_)
 {
     if (data_.size() < maxBytes_)
         data_.resize(maxBytes_);
@@ -79,7 +76,7 @@ DataSerializer::DataSerializer(std::vector<char> &data_, size_t maxBytes_)
     ResetFill();
 }
 
-DataSerializer::DataSerializer(std::vector<char> &data_, size_t maxBytes_, const SerializedMessageDesc *msgTemplate)
+DataSerializer::DataSerializer(std::vector<char>& data_, size_t maxBytes_, const SerializedMessageDesc* msgTemplate)
 {
     if (data_.size() < maxBytes_)
         data_.resize(maxBytes_);
@@ -106,9 +103,9 @@ void DataSerializer::AppendByte(u8 byte)
 void DataSerializer::AppendUnalignedByte(u8 byte)
 {
     // The current partial byte can hold (8-bitOfs) bits.
-    data[elemOfs] = (data[elemOfs] & LSB(bitOfs)) | ((byte & LSB(8-bitOfs)) << bitOfs);
+    data[elemOfs] = (data[elemOfs] & LSB(bitOfs)) | ((byte & LSB(8 - bitOfs)) << bitOfs);
     // The next byte can hold full 8 bits, but we only need to add bitOfs bits.
-    data[++elemOfs] = byte >> (8-bitOfs);
+    data[++elemOfs] = byte >> (8 - bitOfs);
 }
 
 void DataSerializer::AppendAlignedByte(u8 byte)
@@ -121,8 +118,8 @@ void DataSerializer::AppendAlignedByte(u8 byte)
 
 void DataSerializer::AppendBits(u32 value, int amount)
 {
-    const u8 *bytes = reinterpret_cast<const u8*>(&value);
-    while(amount >= 8)
+    const u8* bytes = reinterpret_cast<const u8*>(&value);
+    while (amount >= 8)
     {
         AppendByte(*bytes);
         ++bytes;
@@ -131,9 +128,9 @@ void DataSerializer::AppendBits(u32 value, int amount)
 
     u8 remainder = *bytes & LSB(amount);
 
-    data[elemOfs] = (data[elemOfs] & LSB(bitOfs)) | ((remainder & LSB(8-bitOfs)) << bitOfs);
+    data[elemOfs] = (data[elemOfs] & LSB(bitOfs)) | ((remainder & LSB(8 - bitOfs)) << bitOfs);
     if (bitOfs + amount >= 8)
-        data[++elemOfs] = remainder >> (8-bitOfs);
+        data[++elemOfs] = remainder >> (8 - bitOfs);
 
     bitOfs = (bitOfs + amount) & 7;
 }
@@ -146,7 +143,7 @@ void DataSerializer::ResetFill()
     bitOfs = 0;
 }
 
-void DataSerializer::AddAlignedByteArray(const void *srcData, u32 numBytes)
+void DataSerializer::AddAlignedByteArray(const void* srcData, u32 numBytes)
 {
     assert(bitOfs == 0);
     assert(!iter);
@@ -163,7 +160,8 @@ u32 DataSerializer::AddUnsignedFixedPoint(int numIntegerBits, int numDecimalBits
     assert(numDecimalBits > 0);
     assert(numIntegerBits + numDecimalBits <= 32);
     const float maxVal = (float)(1 << numIntegerBits);
-    const u32 maxBitPattern = (1 << (numIntegerBits + numDecimalBits)) - 1; // All ones - the largest value we can send.
+    const u32 maxBitPattern =
+        (1 << (numIntegerBits + numDecimalBits)) - 1;  // All ones - the largest value we can send.
     u32 outVal = value <= 0 ? 0 : (value >= maxVal ? maxBitPattern : (u32)(value * (float)(1 << numDecimalBits)));
     assert(outVal <= maxBitPattern);
     AppendBits(outVal, numIntegerBits + numDecimalBits);
@@ -173,14 +171,18 @@ u32 DataSerializer::AddUnsignedFixedPoint(int numIntegerBits, int numDecimalBits
 u32 DataSerializer::AddSignedFixedPoint(int numIntegerBits, int numDecimalBits, float value)
 {
     // Adding a [-k, k-1] range -> remap to unsigned [0, 2k-1] range and send that instead.
-    return AddUnsignedFixedPoint(numIntegerBits, numDecimalBits, value + (float)(1 << (numIntegerBits-1)));
+    return AddUnsignedFixedPoint(numIntegerBits, numDecimalBits, value + (float)(1 << (numIntegerBits - 1)));
 }
 
-static inline float ClampF(float val, float minVal, float maxVal) { return val <= minVal ? minVal : (val >= maxVal ? maxVal : val); }
+static inline float ClampF(float val, float minVal, float maxVal)
+{
+    return val <= minVal ? minVal : (val >= maxVal ? maxVal : val);
+}
 
 u32 DataSerializer::AddQuantizedFloat(float minRange, float maxRange, int numBits, float value)
 {
-    u32 outVal = (u32)((ClampF(value, minRange, maxRange) - minRange) * (float)((1 << numBits)-1) / (maxRange - minRange));
+    u32 outVal =
+        (u32)((ClampF(value, minRange, maxRange) - minRange) * (float)((1 << numBits) - 1) / (maxRange - minRange));
     AppendBits(outVal, numBits);
     return outVal;
 }
@@ -224,22 +226,22 @@ void DataSerializer::AddMiniFloat(bool signBit, int exponentBits, int mantissaBi
     u32 v = *(u32*)&value;
     u32 biasedExponent = (v & 0x7F800000) >> 23;
     u32 mantissa = v & 0x7FFFFF;
-    bool sign = (v & 0x80000000) != 0; // If true, the float is negative.
+    bool sign = (v & 0x80000000) != 0;  // If true, the float is negative.
 
     // Write the sign bit, if sending out a signed minifloat. Otherwise, clamp all negative numbers to +zero.
     if (signBit)
         Add<bit>(sign);
     else if (sign && biasedExponent != 0)
-        biasedExponent = mantissa = 0; // If the number was not a NaN, write out +zero.
+        biasedExponent = mantissa = 0;  // If the number was not a NaN, write out +zero.
 
     // The maximum biased exponent value in the reduced precision representation. This corresponds to NaNs and +/-Infs.
     const u32 maxBiasedExponent = (1 << exponentBits) - 1;
 
-    int trueExponent = biasedExponent - 127; // The true exponent of the float, if this number is a normal number.
+    int trueExponent = biasedExponent - 127;  // The true exponent of the float, if this number is a normal number.
     int newBiasedExponent;
 
     // Compute the new biased exponent value to send.
-    if (biasedExponent != 0xFF && biasedExponent != 0) // Is this a normalized float?
+    if (biasedExponent != 0xFF && biasedExponent != 0)  // Is this a normalized float?
     {
         newBiasedExponent = trueExponent + exponentBias;
 
@@ -247,7 +249,7 @@ void DataSerializer::AddMiniFloat(bool signBit, int exponentBits, int mantissaBi
         if (newBiasedExponent >= (int)maxBiasedExponent)
         {
             newBiasedExponent = maxBiasedExponent;
-            mantissa = 0; // To specify that this is an Inf and not a NaN.
+            mantissa = 0;  // To specify that this is an Inf and not a NaN.
         }
         // Check if the new biased exponent underflowed. In that case flush to zero.
         ///\todo This is not absolutely correct with respect to denormalized numbers. Underflowing
@@ -256,37 +258,41 @@ void DataSerializer::AddMiniFloat(bool signBit, int exponentBits, int mantissaBi
             newBiasedExponent = mantissa = 0;
     }
     else
-        newBiasedExponent = biasedExponent; // either all zeroes (+/-zero or denormal) or all ones (nan or inf).
+        newBiasedExponent = biasedExponent;  // either all zeroes (+/-zero or denormal) or all ones (nan or inf).
 
     // Scrap the given number of precision from the mantissa.
     u32 newMantissa = mantissa >> (23 - mantissaBits);
 
     // If the float was a SNaN, make sure it stays a SNaN after some of the NaN payload was removed.
     if (biasedExponent == 0xFF && mantissa != 0 && newMantissa == 0)
-        newMantissa = 1; // Set the mantissa to nonzero to denote a NaN (and don't set the MSB of mantissa, to treat it as SNaN)
+        newMantissa =
+            1;  // Set the mantissa to nonzero to denote a NaN (and don't set the MSB of mantissa, to treat it as SNaN)
 
     AppendBits(newBiasedExponent, exponentBits);
     AppendBits(newMantissa, mantissaBits);
 }
 
-#define PI ((float)3.1415926535897932384626433832795028841971693993751058209749445923078164062862089986280348253421170679)
+#define PI \
+    ((float)3.1415926535897932384626433832795028841971693993751058209749445923078164062862089986280348253421170679)
 
 void DataSerializer::AddNormalizedVector2D(float x, float y, int numBits)
 {
-    // Call atan2() to get the aimed angle of the 2D vector in the range [-PI, PI], then quantize the 1D result to the desired precision.
+    // Call atan2() to get the aimed angle of the 2D vector in the range [-PI, PI], then quantize the 1D result to the
+    // desired precision.
     AddQuantizedFloat(-PI, PI, numBits, atan2(y, x));
 }
 
 int DataSerializer::AddVector2D(float x, float y, int magnitudeIntegerBits, int magnitudeDecimalBits, int directionBits)
 {
     // Compute the length of the vector. Use a fixed-point representation to store the length.
-    float length = sqrt(x*x+y*y);
+    float length = sqrt(x * x + y * y);
     u32 bitVal = AddUnsignedFixedPoint(magnitudeIntegerBits, magnitudeDecimalBits, length);
 
     // If length == 0, don't need to send the angle, as it's a zero vector.
     if (bitVal != 0)
     {
-        // Call atan2() to get the aimed angle of the 2D vector in the range [-PI, PI], then quantize the 1D result to the desired precision.
+        // Call atan2() to get the aimed angle of the 2D vector in the range [-PI, PI], then quantize the 1D result to
+        // the desired precision.
         float angle = atan2(y, x);
         AddQuantizedFloat(-PI, PI, directionBits, angle);
         return magnitudeIntegerBits + magnitudeDecimalBits + directionBits;
@@ -298,16 +304,17 @@ int DataSerializer::AddVector2D(float x, float y, int magnitudeIntegerBits, int 
 void DataSerializer::AddNormalizedVector3D(float x, float y, float z, int numBitsYaw, int numBitsPitch)
 {
     // Convert to spherical coordinates. We assume that the vector (x,y,z) has been normalized beforehand.
-    float azimuth = atan2(x, z); // The 'yaw'
-    float inclination = asin(-y); // The 'pitch'
+    float azimuth = atan2(x, z);   // The 'yaw'
+    float inclination = asin(-y);  // The 'pitch'
 
     AddQuantizedFloat(-PI, PI, numBitsYaw, azimuth);
-    AddQuantizedFloat(-PI/2, PI/2, numBitsPitch, inclination);
+    AddQuantizedFloat(-PI / 2, PI / 2, numBitsPitch, inclination);
 }
 
-int DataSerializer::AddVector3D(float x, float y, float z, int numBitsYaw, int numBitsPitch, int magnitudeIntegerBits, int magnitudeDecimalBits)
+int DataSerializer::AddVector3D(
+    float x, float y, float z, int numBitsYaw, int numBitsPitch, int magnitudeIntegerBits, int magnitudeDecimalBits)
 {
-    float length = sqrt(x*x + y*y + z*z);
+    float length = sqrt(x * x + y * y + z * z);
 
     u32 bitVal = AddUnsignedFixedPoint(magnitudeIntegerBits, magnitudeDecimalBits, length);
 
@@ -318,10 +325,10 @@ int DataSerializer::AddVector3D(float x, float y, float z, int numBitsYaw, int n
         float inclination = asin(-y / length);
 
         AddQuantizedFloat(-PI, PI, numBitsYaw, azimuth);
-        AddQuantizedFloat(-PI/2, PI/2, numBitsPitch, inclination);
+        AddQuantizedFloat(-PI / 2, PI / 2, numBitsPitch, inclination);
         return magnitudeIntegerBits + magnitudeDecimalBits + numBitsYaw + numBitsPitch;
     }
-    else // The vector is (0,0,0). Don't send spherical angles as they're redundant.
+    else  // The vector is (0,0,0). Don't send spherical angles as they're redundant.
         return magnitudeIntegerBits + magnitudeDecimalBits;
 }
 
@@ -347,7 +354,8 @@ void DataSerializer::AddArithmeticEncoded(int numBits, int val1, int max1, int v
     AppendBits((val1 * max2 + val2) * max3 + val3, numBits);
 }
 
-void DataSerializer::AddArithmeticEncoded(int numBits, int val1, int max1, int val2, int max2, int val3, int max3, int val4, int max4)
+void DataSerializer::AddArithmeticEncoded(
+    int numBits, int val1, int max1, int val2, int max2, int val3, int max3, int val4, int max4)
 {
     assert(max1 * max2 * max3 * max4 < (1 << numBits));
     assert(val1 >= 0);
@@ -361,7 +369,8 @@ void DataSerializer::AddArithmeticEncoded(int numBits, int val1, int max1, int v
     AppendBits(((val1 * max2 + val2) * max3 + val3) * max4 + val4, numBits);
 }
 
-void DataSerializer::AddArithmeticEncoded(int numBits, int val1, int max1, int val2, int max2, int val3, int max3, int val4, int max4, int val5, int max5)
+void DataSerializer::AddArithmeticEncoded(
+    int numBits, int val1, int max1, int val2, int max2, int val3, int max3, int val4, int max4, int val5, int max5)
 {
     assert(max1 * max2 * max3 * max4 * max5 < (1 << numBits));
     assert(val1 >= 0);
@@ -388,32 +397,32 @@ void DataSerializer::SetVaryingElemSize(u32 count)
     iter->SetVaryingElemSize(count);
 }
 
-template<>
-void DataSerializer::Add<char*>(char * const & value)
+template <>
+void DataSerializer::Add<char*>(char* const& value)
 {
     AddString(value);
 }
 
-template<>
-void DataSerializer::Add<const char*>(const char * const & value)
+template <>
+void DataSerializer::Add<const char*>(const char* const& value)
 {
     AddString(value);
 }
 
-template<>
-void DataSerializer::Add<std::string>(const std::string &value)
+template <>
+void DataSerializer::Add<std::string>(const std::string& value)
 {
     AddString(value);
 }
 
-template<>
-void DataSerializer::Add<bit>(const bit &value)
+template <>
+void DataSerializer::Add<bit>(const bit& value)
 {
     u8 val = (value != 0) ? 1 : 0;
     AppendBits(val, 1);
 }
 
-void DataSerializer::AddString(const char *str)
+void DataSerializer::AddString(const char* str)
 {
     size_t len = strlen(str);
     if (iter)
@@ -439,9 +448,9 @@ bool DataSerializer::DebugReadBit(int bitIndex) const
 std::string DataSerializer::DebugReadBits(int startIndex, int endIndex) const
 {
     std::stringstream ss;
-    for(int i = startIndex; i < endIndex; ++i)
+    for (int i = startIndex; i < endIndex; ++i)
         ss << (DebugReadBit(i) ? "1" : "0");
     return ss.str();
 }
 
-} // ~kNet
+}  // ~kNet

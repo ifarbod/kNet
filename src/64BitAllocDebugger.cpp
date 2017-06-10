@@ -3,7 +3,7 @@
 // Author(s):       kNet Authors <https://github.com/juj/kNet>
 //                  iFarbod <>
 //
-// Copyright (c) 2015-2017 CtNorth Team
+// Copyright (c) 2015-2017 Project CTNorth
 //
 // Distributed under the MIT license (See accompanying file LICENSE or copy at
 // https://opensource.org/licenses/MIT)
@@ -33,7 +33,7 @@ BottomMemoryAllocator::~BottomMemoryAllocator()
 void BottomMemoryAllocator::ReserveBottomMemory()
 {
     static bool s_initialized = false;
-    if ( s_initialized )
+    if (s_initialized)
         return;
     s_initialized = true;
 
@@ -119,21 +119,20 @@ void BottomMemoryAllocator::ReserveBottomMemory()
     // Print diagnostics showing how many allocations we had to make in
     // order to reserve all of low memory, typically less than 200.
     printf("Reserved %1.3f MB (%d vallocs,"
-                    "%d heap allocs) of low-memory.\n",
-            totalReservation / (1024 * 1024.0),
-            (int)numVAllocs, (int)numHeapAllocs);
+           "%d heap allocs) of low-memory.\n",
+        totalReservation / (1024 * 1024.0), (int)numVAllocs, (int)numHeapAllocs);
 }
 
 void BottomMemoryAllocator::FreeBottomMemory()
 {
-    for(size_t i = 0; i < virtualAllocated.size(); ++i)
+    for (size_t i = 0; i < virtualAllocated.size(); ++i)
         VirtualFree(virtualAllocated[i], 0, MEM_RELEASE);
 
     HANDLE heap = GetProcessHeap();
-    for(size_t i = 0; i < heapAllocated.size(); ++i)
+    for (size_t i = 0; i < heapAllocated.size(); ++i)
         HeapFree(heap, 0, heapAllocated[i]);
 
-    for(size_t i = 0; i < mallocAllocated.size(); ++i)
+    for (size_t i = 0; i < mallocAllocated.size(); ++i)
         free(mallocAllocated[i]);
 }
 

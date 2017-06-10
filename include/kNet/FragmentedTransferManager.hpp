@@ -3,7 +3,7 @@
 // Author(s):       kNet Authors <https://github.com/juj/kNet>
 //                  iFarbod <>
 //
-// Copyright (c) 2015-2017 CtNorth Team
+// Copyright (c) 2015-2017 Project CTNorth
 //
 // Distributed under the MIT license (See accompanying file LICENSE or copy at
 // https://opensource.org/licenses/MIT)
@@ -14,16 +14,16 @@
     @brief The classes \ref kNet::FragmentedSendManager FragmentedSendManager and
     \ref kNet::FragmentedSendManager FragmentedReceiveManager. For managing partial transfers. */
 
-#include <vector>
 #include <list>
+#include <vector>
 
 namespace kNet
 {
 
 class NetworkMessage;
 
-/// @internal Manages the allocation of transferIDs to fragmented message transfers and tracks which of the fragments have
-/// successfully been sent over to the receiver.
+/// @internal Manages the allocation of transferIDs to fragmented message transfers and tracks which of the fragments
+/// have successfully been sent over to the receiver.
 class FragmentedSendManager
 {
 public:
@@ -36,10 +36,10 @@ public:
 
         std::list<NetworkMessage*> fragments;
 
-        void AddMessage(NetworkMessage *message);
+        void AddMessage(NetworkMessage* message);
 
         /// Returns true if the given message was part of this transfer (which now got removed).
-        bool RemoveMessage(NetworkMessage *message);
+        bool RemoveMessage(NetworkMessage* message);
     };
 
     typedef std::list<FragmentedTransfer> TransferList;
@@ -47,16 +47,16 @@ public:
 
     /// Returns a new FragmentedTransfer. A transferID for this transfer will not have been allocated here.
     /// When sending the message is finished, call FreeFragmentedTransfer.
-    FragmentedTransfer *AllocateNewFragmentedTransfer();
-    void RemoveMessage(FragmentedTransfer *transfer, NetworkMessage *message);
+    FragmentedTransfer* AllocateNewFragmentedTransfer();
+    void RemoveMessage(FragmentedTransfer* transfer, NetworkMessage* message);
 
     /// @return True if the allocation succeeded, false otherwise.
-    bool AllocateFragmentedTransferID(FragmentedTransfer &transfer);
+    bool AllocateFragmentedTransferID(FragmentedTransfer& transfer);
 
     void FreeAllTransfers();
 
 private:
-    void FreeFragmentedTransfer(FragmentedTransfer *transfer);
+    void FreeFragmentedTransfer(FragmentedTransfer* transfer);
 };
 
 /// @internal Receives message fragments and assembles fragments to complete messages when they are finished.
@@ -81,10 +81,10 @@ public:
 
     std::vector<ReceiveTransfer> transfers;
 
-    void NewFragmentStartReceived(int transferID, int numTotalFragments, const char *data, size_t numBytes);
-    bool NewFragmentReceived(int transferID, int fragmentNumber, const char *data, size_t numBytes);
-    void AssembleMessage(int transferID, std::vector<char> &assembledData);
+    void NewFragmentStartReceived(int transferID, int numTotalFragments, const char* data, size_t numBytes);
+    bool NewFragmentReceived(int transferID, int fragmentNumber, const char* data, size_t numBytes);
+    void AssembleMessage(int transferID, std::vector<char>& assembledData);
     void FreeMessage(int transferID);
 };
 
-} // ~kNet
+}  // ~kNet

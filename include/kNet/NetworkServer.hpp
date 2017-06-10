@@ -3,7 +3,7 @@
 // Author(s):       kNet Authors <https://github.com/juj/kNet>
 //                  iFarbod <>
 //
-// Copyright (c) 2015-2017 CtNorth Team
+// Copyright (c) 2015-2017 Project CTNorth
 //
 // Distributed under the MIT license (See accompanying file LICENSE or copy at
 // https://opensource.org/licenses/MIT)
@@ -15,13 +15,12 @@
 
 #include <list>
 
-
-#include "SharedPtr.hpp"
-#include "Socket.hpp"
-#include "MessageConnection.hpp"
 #include "Datagram.hpp"
 #include "INetworkServerListener.hpp"
 #include "Lockable.hpp"
+#include "MessageConnection.hpp"
+#include "SharedPtr.hpp"
+#include "Socket.hpp"
 
 namespace kNet
 {
@@ -60,50 +59,51 @@ public:
     /// @param exclude The network connection to exclude from the recipient list. All other clients connected to this
     /// server will get the message. This parameter is useful when you are implementing a server that relays messages
     /// between clients and want to avoid "echoing" the original message back to the client who sent it.
-    void BroadcastMessage(const NetworkMessage &msg, MessageConnection *exclude = 0);
+    void BroadcastMessage(const NetworkMessage& msg, MessageConnection* exclude = 0);
 
     /// Creates a NetworkMessage structure with the given data and broadcasts it to all currently active connections,
     /// except to the given excluded connection.
     void BroadcastMessage(unsigned long id, bool reliable, bool inOrder, unsigned long priority,
-                          unsigned long contentID, const char *data, size_t numBytes,
-                          MessageConnection *exclude = 0);
+        unsigned long contentID, const char* data, size_t numBytes, MessageConnection* exclude = 0);
 
-    template<typename SerializableData>
-    void BroadcastStruct(const SerializableData &data, unsigned long id, bool inOrder,
-        bool reliable, unsigned long priority, unsigned long contentID = 0, MessageConnection *exclude = 0);
+    template <typename SerializableData>
+    void BroadcastStruct(const SerializableData& data, unsigned long id, bool inOrder, bool reliable,
+        unsigned long priority, unsigned long contentID = 0, MessageConnection* exclude = 0);
 
-    template<typename SerializableMessage>
-    void Broadcast(const SerializableMessage &data, unsigned long contentID = 0, MessageConnection *exclude = 0);
+    template <typename SerializableMessage>
+    void Broadcast(const SerializableMessage& data, unsigned long contentID = 0, MessageConnection* exclude = 0);
 
     /// Sends the given message to the given destination.
-    void SendMessage(const NetworkMessage &msg, MessageConnection &destination);
+    void SendMessage(const NetworkMessage& msg, MessageConnection& destination);
 
     /// Starts a benign disconnection procedure for all clients (write-closes each connection).
-    /// Also calls SetAcceptNewConnections(false), since this function is intended to be used when the server is going down.
-    /// It can take an indefinite time for the connections to bidirectionally close, since it is up to the individual
-    /// clients to write-close their end of the connections. This function returns immediately.
+    /// Also calls SetAcceptNewConnections(false), since this function is intended to be used when the server is going
+    /// down. It can take an indefinite time for the connections to bidirectionally close, since it is up to the
+    /// individual clients to write-close their end of the connections. This function returns immediately.
     void DisconnectAllClients();
 
     /// Forcibly closes down the server. Calls SetAcceptNewConnections(false) so that no new connections are accepted.
-    /// @param disconnectWaitMilliseconds If >0, this function calls DisconnectAllClients() and waits for the given amount
-    ///         of time until calling Close() on each client connection. If 0, MessageConnection::Close(0) will be immediately
-    ///         called on each client. In that case, this function returns immediately and all active clients will be left
-    ///         to time out at their end. Calling this function does not guarantee that all outbound data will be received
-    ///         by the peers.
+    /// @param disconnectWaitMilliseconds If >0, this function calls DisconnectAllClients() and waits for the given
+    /// amount
+    ///         of time until calling Close() on each client connection. If 0, MessageConnection::Close(0) will be
+    ///         immediately called on each client. In that case, this function returns immediately and all active
+    ///         clients will be left to time out at their end. Calling this function does not guarantee that all
+    ///         outbound data will be received by the peers.
     void Close(int disconnectWaitMilliseconds);
 
     /// Forcibly erases the given connection from the active connection list. The client will be left to time out.
-    void ConnectionClosed(MessageConnection *connection);
+    void ConnectionClosed(MessageConnection* connection);
 
     /// Returns all the sockets this server is listening on.
-    std::vector<Socket *> &ListenSockets();
+    std::vector<Socket*>& ListenSockets();
 
     typedef std::map<EndPoint, Ptr(MessageConnection)> ConnectionMap;
 
     /// Returns all the currently tracked connections.
     ConnectionMap GetConnections();
 
-    /// Returns the number of currently active connections. A connection is active if it is at least read- or write-open.
+    /// Returns the number of currently active connections. A connection is active if it is at least read- or
+    /// write-open.
     int NumConnections() const;
 
     /// Returns a one-liner textual summary of this server.
@@ -111,43 +111,44 @@ public:
 
 private:
     /// Private ctor - NetworkServer instances are created by the Network class.
-    NetworkServer(Network *owner, std::vector<Socket *> listenSockets);
+    NetworkServer(Network* owner, std::vector<Socket*> listenSockets);
 
     /// We store possibly multiple listening sockets so that the server
     /// can listen on several sockets (UDP or TCP) at once, making it
     /// possible for clients to bypass firewalls and/or mix UDP and TCP use.
-    std::vector<Socket *> listenSockets;
+    std::vector<Socket*> listenSockets;
 
     /// The list of active client connections.
     Lockable<ConnectionMap> clients;
 
     /// The Network object this NetworkServer was spawned from.
-    Network *owner;
+    Network* owner;
 
     /// Stores the thread that manages the background processing of this server. The same thread can manage multiple
     /// connections and servers, and not just this one.
-    NetworkWorkerThread *workerThread; // [set and read only by worker thread]
+    NetworkWorkerThread* workerThread;  // [set and read only by worker thread]
 
 #ifdef KNET_THREAD_CHECKING_ENABLED
     /// In debug mode, we track and enforce thread safety constraints through this ID.
-    ThreadId workerThreadId; // [set by worker thread on thread startup, read by both main and worker thread]
+    ThreadId workerThreadId;  // [set by worker thread on thread startup, read by both main and worker thread]
 #endif
 
     /// If true, new connection attempts are processed. Otherwise, just discard all connection packets.
     bool acceptNewConnections;
 
-    INetworkServerListener *networkServerListener;
+    INetworkServerListener* networkServerListener;
 
     /// Sets the worker thread object that will handle this server.
-    void SetWorkerThread(NetworkWorkerThread *thread); // [main thread]
+    void SetWorkerThread(NetworkWorkerThread* thread);  // [main thread]
 
-    NetworkWorkerThread *WorkerThread() const { return workerThread; }
+    NetworkWorkerThread* WorkerThread() const { return workerThread; }
 
     /// If the server is running in UDP mode, the listenSocket is the socket that receives all application data.
-    /// This function pulls all new data from the socket and sends it to MessageConnection instances for deserialization and processing.
-    void ReadUDPSocketData(Socket *listenSocket); // [worker thread]
+    /// This function pulls all new data from the socket and sends it to MessageConnection instances for deserialization
+    /// and processing.
+    void ReadUDPSocketData(Socket* listenSocket);  // [worker thread]
 
-    void RegisterServerListener(INetworkServerListener *listener);
+    void RegisterServerListener(INetworkServerListener* listener);
 
     /// Shuts down all listen sockets used by this server.
     /// This function is to be called only at destruction time when no network communication is being performed anymore.
@@ -155,11 +156,11 @@ private:
 
     void CleanupDeadConnections();
 
-    Socket *AcceptConnections(Socket *listenSocket);
+    Socket* AcceptConnections(Socket* listenSocket);
 
     struct ConnectionAttemptDescriptor
     {
-        Socket *listenSocket;
+        Socket* listenSocket;
         EndPoint peer;
         Datagram data;
     };
@@ -167,17 +168,19 @@ private:
     WaitFreeQueue<ConnectionAttemptDescriptor> udpConnectionAttempts;
 
     /// Called from the network worker thread.
-    void EnqueueNewUDPConnectionAttempt(Socket *listenSocket, const EndPoint &endPoint, const char *data, size_t numBytes);
+    void EnqueueNewUDPConnectionAttempt(
+        Socket* listenSocket, const EndPoint& endPoint, const char* data, size_t numBytes);
 
-    bool ProcessNewUDPConnectionAttempt(Socket *listenSocket, const EndPoint &endPoint, const char *data, size_t numBytes);
+    bool ProcessNewUDPConnectionAttempt(
+        Socket* listenSocket, const EndPoint& endPoint, const char* data, size_t numBytes);
 
     friend class Network;
     friend class NetworkWorkerThread;
 };
 
-template<typename SerializableData>
-void NetworkServer::BroadcastStruct(const SerializableData &data, unsigned long id, bool inOrder,
-    bool reliable, unsigned long priority, unsigned long contentID, MessageConnection *exclude)
+template <typename SerializableData>
+void NetworkServer::BroadcastStruct(const SerializableData& data, unsigned long id, bool inOrder, bool reliable,
+    unsigned long priority, unsigned long contentID, MessageConnection* exclude)
 {
     PolledTimer timer;
     Lockable<ConnectionMap>::LockType clientsLock = clients.Acquire();
@@ -189,20 +192,20 @@ void NetworkServer::BroadcastStruct(const SerializableData &data, unsigned long 
 
     const size_t dataSize = data.Size();
 
-    for(ConnectionMap::iterator iter = clientsLock->begin(); iter != clientsLock->end(); ++iter)
+    for (ConnectionMap::iterator iter = clientsLock->begin(); iter != clientsLock->end(); ++iter)
     {
-        MessageConnection *connection = iter->second;
+        MessageConnection* connection = iter->second;
         assert(connection);
         if (connection == exclude || !connection->IsWriteOpen())
             continue;
 
-        NetworkMessage *msg = connection->StartNewMessage(id, dataSize);
+        NetworkMessage* msg = connection->StartNewMessage(id, dataSize);
 
         if (dataSize > 0)
         {
             DataSerializer mb(msg->data, dataSize);
             data.SerializeTo(mb);
-            assert(mb.BytesFilled() == dataSize); // The SerializableData::Size() estimate must be exact!
+            assert(mb.BytesFilled() == dataSize);  // The SerializableData::Size() estimate must be exact!
         }
 
         msg->id = id;
@@ -221,10 +224,11 @@ void NetworkServer::BroadcastStruct(const SerializableData &data, unsigned long 
     }
 }
 
-template<typename SerializableMessage>
-void NetworkServer::Broadcast(const SerializableMessage &data, unsigned long contentID, MessageConnection *exclude)
+template <typename SerializableMessage>
+void NetworkServer::Broadcast(const SerializableMessage& data, unsigned long contentID, MessageConnection* exclude)
 {
-    BroadcastStruct(data, SerializableMessage::messageID, data.inOrder, data.reliable, data.priority, contentID, exclude);
+    BroadcastStruct(
+        data, SerializableMessage::messageID, data.inOrder, data.reliable, data.priority, contentID, exclude);
 }
 
-} // ~kNet
+}  // ~kNet

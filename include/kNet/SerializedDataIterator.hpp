@@ -3,7 +3,7 @@
 // Author(s):       kNet Authors <https://github.com/juj/kNet>
 //                  iFarbod <>
 //
-// Copyright (c) 2015-2017 CtNorth Team
+// Copyright (c) 2015-2017 Project CTNorth
 //
 // Distributed under the MIT license (See accompanying file LICENSE or copy at
 // https://opensource.org/licenses/MIT)
@@ -13,8 +13,8 @@
 /** @file SerializedDataIterator.h
     @brief The SerializedDataIterator class. */
 
-#include "SharedPtr.hpp"
 #include "MessageListParser.hpp"
+#include "SharedPtr.hpp"
 
 namespace kNet
 {
@@ -22,15 +22,11 @@ namespace kNet
 class SerializedDataIterator : public RefCountable
 {
 public:
-    SerializedDataIterator(const SerializedMessageDesc &desc_)
-    :desc(desc_)
-    {
-        ResetTraversal();
-    }
+    SerializedDataIterator(const SerializedMessageDesc& desc_) : desc(desc_) { ResetTraversal(); }
 
     BasicSerializedDataType NextElementType() const;
 
-    const SerializedElementDesc *NextElementDesc() const;
+    const SerializedElementDesc* NextElementDesc() const;
 
     void ProceedToNextVariable();
 
@@ -47,7 +43,7 @@ private:
     struct ElemInfo
     {
         /// The element we are accessing next.
-        SerializedElementDesc *elem;
+        SerializedElementDesc* elem;
         /// The index of the elem we are accessing next.
         int nextElem;
         /// The index of the instance we are accessing next.
@@ -64,10 +60,10 @@ private:
     /// Stores the tree traversal progress.
     std::vector<ElemInfo> currentElementStack;
     /// The type of the message we are building.
-    const SerializedMessageDesc &desc;
+    const SerializedMessageDesc& desc;
 
-    void operator =(const SerializedDataIterator&);
+    void operator=(const SerializedDataIterator&);
     SerializedDataIterator(const SerializedDataIterator&);
 };
 
-} // ~kNet
+}  // ~kNet

@@ -3,7 +3,7 @@
 // Author(s):       kNet Authors <https://github.com/juj/kNet>
 //                  iFarbod <>
 //
-// Copyright (c) 2015-2017 CtNorth Team
+// Copyright (c) 2015-2017 Project CTNorth
 //
 // Distributed under the MIT license (See accompanying file LICENSE or copy at
 // https://opensource.org/licenses/MIT)
@@ -36,7 +36,7 @@ namespace kNet
 class TCPMessageConnection : public MessageConnection
 {
 public:
-    TCPMessageConnection(Network *owner, NetworkServer *ownerServer, Socket *socket, ConnectionState startingState);
+    TCPMessageConnection(Network* owner, NetworkServer* ownerServer, Socket* socket, ConnectionState startingState);
     ~TCPMessageConnection();
 
 private:
@@ -44,12 +44,12 @@ private:
     RingBuffer tcpInboundSocketData;
 
     /// Reads all available bytes from a stream socket.
-    SocketReadResult ReadSocket(size_t &bytesRead); // [worker thread]
+    SocketReadResult ReadSocket(size_t& bytesRead);  // [worker thread]
 
-    PacketSendResult SendOutPacket(); // [worker thread]
-    void SendOutPackets(); // [worker thread]
+    PacketSendResult SendOutPacket();  // [worker thread]
+    void SendOutPackets();             // [worker thread]
 
-    void DoUpdateConnection(); // [worker thread]
+    void DoUpdateConnection();  // [worker thread]
 
     unsigned long TimeUntilCanSendPacket() const;
 
@@ -57,11 +57,11 @@ private:
     void ExtractMessages();
 
     // The following are temporary data structures used by various internal routines for processing.
-    std::vector<NetworkMessage*> serializedMessages; // MessageConnection::TCPSendOutPacket()
+    std::vector<NetworkMessage*> serializedMessages;  // MessageConnection::TCPSendOutPacket()
 
     void PerformDisconnection();
 
-    void DumpConnectionStatus() const; // [main thread]
+    void DumpConnectionStatus() const;  // [main thread]
 };
 
-} // ~kNet
+}  // ~kNet

@@ -3,7 +3,7 @@
 // Author(s):       kNet Authors <https://github.com/juj/kNet>
 //                  iFarbod <>
 //
-// Copyright (c) 2015-2017 CtNorth Team
+// Copyright (c) 2015-2017 Project CTNorth
 //
 // Distributed under the MIT license (See accompanying file LICENSE or copy at
 // https://opensource.org/licenses/MIT)
@@ -20,48 +20,51 @@
 
 #include "kNet/DebugMemoryLeakCheck.hpp"
 
-#include "kNet/NetworkLogging.hpp"
 #include "kNet/MessageListParser.hpp"
 #include "kNet/NetException.hpp"
+#include "kNet/NetworkLogging.hpp"
 #include "kNet/Socket.hpp"
 
-#define NUMELEMS(x) (sizeof(x)/sizeof(x[0]))
+#define NUMELEMS(x) (sizeof(x) / sizeof(x[0]))
 
 namespace
 {
-    ///\note See BasicSerializedDataTypes.h:31: The order of these elements matches that of the BasicSerializedDataType enum.
-    const char *data[] = { "", "bit", "u8", "s8", "u16", "s16", "u32", "s32", "u64", "s64", "float", "double", "string", "struct" };
-    const size_t typeSizes[] = { 0xFFFFFFFF, 0xFFFFFFFF, 1, 1, 2, 2, 4, 4, 8, 8, 4, 8, 0xFFFFFFFF, 0xFFFFFFFF }; // 0xFFFFFFFF here denotes 'does not apply'.
+///\note See BasicSerializedDataTypes.h:31: The order of these elements matches that of the BasicSerializedDataType
+///enum.
+const char* data[] = {
+    "", "bit", "u8", "s8", "u16", "s16", "u32", "s32", "u64", "s64", "float", "double", "string", "struct"};
+const size_t typeSizes[] = {0xFFFFFFFF, 0xFFFFFFFF, 1, 1, 2, 2, 4, 4, 8, 8, 4, 8, 0xFFFFFFFF,
+    0xFFFFFFFF};  // 0xFFFFFFFF here denotes 'does not apply'.
 }
 
 namespace kNet
 {
 
-BasicSerializedDataType StringToSerialType(const char *type)
+BasicSerializedDataType StringToSerialType(const char* type)
 {
     if (!strcmp(type, "string") || !strcmp(type, "std::string"))
         return SerialString;
-    assert(NumSerialTypes-2 == NUMELEMS(data));
-    for(size_t i = 0; i < NUMELEMS(data); ++i)
+    assert(NumSerialTypes - 2 == NUMELEMS(data));
+    for (size_t i = 0; i < NUMELEMS(data); ++i)
         if (!strcmp(type, data[i]))
             return (BasicSerializedDataType)i;
 
     return SerialInvalid;
 }
 
-const char *SerialTypeToReadableString(BasicSerializedDataType type)
+const char* SerialTypeToReadableString(BasicSerializedDataType type)
 {
-    assert(NumSerialTypes-2 == NUMELEMS(data));
+    assert(NumSerialTypes - 2 == NUMELEMS(data));
     assert(type >= SerialInvalid);
     assert(type < NumSerialTypes);
     return data[type];
 }
 
-const char *SerialTypeToCTypeString(BasicSerializedDataType type)
+const char* SerialTypeToCTypeString(BasicSerializedDataType type)
 {
     if (type == SerialString)
         return "std::string";
-    assert(NumSerialTypes-2 == NUMELEMS(data));
+    assert(NumSerialTypes - 2 == NUMELEMS(data));
     assert(type >= SerialInvalid);
     assert(type < NumSerialTypes);
     return data[type];
@@ -69,17 +72,17 @@ const char *SerialTypeToCTypeString(BasicSerializedDataType type)
 
 size_t SerialTypeSize(BasicSerializedDataType type)
 {
-    assert(NumSerialTypes-2 == NUMELEMS(data));
+    assert(NumSerialTypes - 2 == NUMELEMS(data));
     assert(type >= SerialInvalid);
     assert(type < NumSerialTypes);
     return typeSizes[type];
 }
 
-SerializedElementDesc *SerializedMessageList::ParseNode(TiXmlElement *node, SerializedElementDesc *parentNode)
+SerializedElementDesc* SerializedMessageList::ParseNode(TiXmlElement* node, SerializedElementDesc* parentNode)
 {
 #ifdef KNET_USE_TINYXML
     elements.push_back(SerializedElementDesc());
-    SerializedElementDesc *elem = &elements.back();
+    SerializedElementDesc* elem = &elements.back();
     elem->parent = parentNode;
     elem->name = node->Attribute("name") ? node->Attribute("name") : "";
 
@@ -93,7 +96,8 @@ SerializedElementDesc *SerializedMessageList::ParseNode(TiXmlElement *node, Seri
     {
         // Cannot have both static count and dynamic count!
         if (node->Attribute("count") && node->Attribute("varyingCount"))
-            KNET_LOG(LogError, "Warning: An XML node contains both 'count' and 'varyingCount' attributes! 'varyingCount' takes precedence.");
+            KNET_LOG(LogError, "Warning: An XML node contains both 'count' and 'varyingCount' attributes! "
+                               "'varyingCount' takes precedence.");
 
         if (node->Attribute("dynamicCount"))
         {
@@ -118,16 +122,17 @@ SerializedElementDesc *SerializedMessageList::ParseNode(TiXmlElement *node, Seri
         if (elem->type == SerialInvalid && !elem->typeString.empty())
             elem->type = SerialOther;
         if (elem->type == SerialStruct)
-            elem->typeString = "S_" + elem->name; ///\todo Add a ClassName parameter for better control over naming here?
+            elem->typeString =
+                "S_" + elem->name;  ///\todo Add a ClassName parameter for better control over naming here?
     }
 
     // If this node is a structure, parse all its members.
     if (elem->type == SerialStruct)
     {
-        TiXmlElement *child = node->FirstChildElement();
-        while(child)
+        TiXmlElement* child = node->FirstChildElement();
+        while (child)
         {
-            SerializedElementDesc *childElem = ParseNode(child, elem);
+            SerializedElementDesc* childElem = ParseNode(child, elem);
             elem->elements.push_back(childElem);
 
             child = child->NextSiblingElement();
@@ -140,7 +145,7 @@ SerializedElementDesc *SerializedMessageList::ParseNode(TiXmlElement *node, Seri
 #endif
 }
 
-bool ParseBool(const char *str)
+bool ParseBool(const char* str)
 {
     if (!str)
         return false;
@@ -151,11 +156,11 @@ bool ParseBool(const char *str)
         return false;
 }
 
-void SerializedMessageList::ParseMessages(TiXmlElement *root)
+void SerializedMessageList::ParseMessages(TiXmlElement* root)
 {
 #ifdef KNET_USE_TINYXML
-    TiXmlElement *node = root->FirstChildElement("message");
-    while(node)
+    TiXmlElement* node = root->FirstChildElement("message");
+    while (node)
     {
         SerializedMessageDesc desc;
         int success = node->QueryIntAttribute("id", (int*)&desc.id);
@@ -167,14 +172,16 @@ void SerializedMessageList::ParseMessages(TiXmlElement *root)
         }
         success = node->QueryIntAttribute("priority", (int*)&desc.priority);
         if (success == TIXML_NO_ATTRIBUTE)
-            desc.priority = 0; // If priority not specified, use the default priority of zero - the lowest priority possible.
+            desc.priority =
+                0;  // If priority not specified, use the default priority of zero - the lowest priority possible.
         if (node->Attribute("name"))
             desc.name = node->Attribute("name");
         desc.reliable = ParseBool(node->Attribute("reliable"));
         desc.inOrder = ParseBool(node->Attribute("inOrder"));
         desc.data = ParseNode(node, 0);
 
-        // Work a slight convenience - if there is a single struct inside a single struct inside a single struct - jump straight through to the data.
+        // Work a slight convenience - if there is a single struct inside a single struct inside a single struct - jump
+        // straight through to the data.
 
         messages.push_back(desc);
 
@@ -185,11 +192,11 @@ void SerializedMessageList::ParseMessages(TiXmlElement *root)
 #endif
 }
 
-void SerializedMessageList::ParseStructs(TiXmlElement *root)
+void SerializedMessageList::ParseStructs(TiXmlElement* root)
 {
 #ifdef KNET_USE_TINYXML
-    TiXmlElement *node = root->FirstChildElement("struct");
-    while(node)
+    TiXmlElement* node = root->FirstChildElement("struct");
+    while (node)
     {
         ParseNode(node, 0);
 
@@ -200,7 +207,7 @@ void SerializedMessageList::ParseStructs(TiXmlElement *root)
 #endif
 }
 
-void SerializedMessageList::LoadMessagesFromFile(const char *filename)
+void SerializedMessageList::LoadMessagesFromFile(const char* filename)
 {
 #ifdef KNET_USE_TINYXML
     TiXmlDocument doc(filename);
@@ -211,7 +218,7 @@ void SerializedMessageList::LoadMessagesFromFile(const char *filename)
         return;
     }
 
-    TiXmlElement *xmlRoot = doc.FirstChildElement();
+    TiXmlElement* xmlRoot = doc.FirstChildElement();
 
     ParseStructs(xmlRoot);
     ParseMessages(xmlRoot);
@@ -220,25 +227,22 @@ void SerializedMessageList::LoadMessagesFromFile(const char *filename)
 #endif
 }
 
-
-const SerializedMessageDesc *SerializedMessageList::FindMessageByID(u32 id)
+const SerializedMessageDesc* SerializedMessageList::FindMessageByID(u32 id)
 {
-    for(std::list<SerializedMessageDesc>::iterator iter = messages.begin();
-        iter != messages.end(); ++iter)
+    for (std::list<SerializedMessageDesc>::iterator iter = messages.begin(); iter != messages.end(); ++iter)
         if (iter->id == id)
             return &*iter;
 
     return 0;
 }
 
-const SerializedMessageDesc *SerializedMessageList::FindMessageByName(const char *name)
+const SerializedMessageDesc* SerializedMessageList::FindMessageByName(const char* name)
 {
-    for(std::list<SerializedMessageDesc>::iterator iter = messages.begin();
-        iter != messages.end(); ++iter)
+    for (std::list<SerializedMessageDesc>::iterator iter = messages.begin(); iter != messages.end(); ++iter)
         if (iter->name == name)
             return &*iter;
 
     return 0;
 }
 
-} // ~kNet
+}  // ~kNet

@@ -3,7 +3,7 @@
 // Author(s):       kNet Authors <https://github.com/juj/kNet>
 //                  iFarbod <>
 //
-// Copyright (c) 2015-2017 CtNorth Team
+// Copyright (c) 2015-2017 Project CTNorth
 //
 // Distributed under the MIT license (See accompanying file LICENSE or copy at
 // https://opensource.org/licenses/MIT)
@@ -22,13 +22,13 @@
 #include "kNet/MessageConnection.hpp"
 #include "kNet/UDPMessageConnection.hpp"
 
-#include "kNet/NetworkLogging.hpp"
-#include "kNet/DataSerializer.hpp"
 #include "kNet/DataDeserializer.hpp"
-#include "kNet/VLEPacker.hpp"
+#include "kNet/DataSerializer.hpp"
 #include "kNet/NetException.hpp"
 #include "kNet/Network.hpp"
+#include "kNet/NetworkLogging.hpp"
 #include "kNet/Sort.hpp"
+#include "kNet/VLEPacker.hpp"
 
 using namespace std;
 
@@ -37,7 +37,7 @@ namespace kNet
 
 /// The maximum time to wait before acking a packet. If there are enough packets to ack for a full ack message,
 /// acking will be performed earlier. (milliseconds)
-static const float maxAckDelay = 33.f; // (1/30th of a second)
+static const float maxAckDelay = 33.f;  // (1/30th of a second)
 /// The maximum number of datagrams to read in from the socket at one go - after this reads will be throttled
 /// to give time for data sending as well.
 static const int cMaxDatagramsToReadInOneFrame = 2048;
@@ -58,10 +58,10 @@ UDPMessageConnection::UDPMessageConnection(
       retransmissionTimeout(1000.0f),
       numAcksLastFrame(0),
       numLossesLastFrame(0),
-      datagramSendRate(50.0f), // was 70
-      lowestDatagramSendRateOnPacketLoss(50.0f), // was 70
+      datagramSendRate(50.0f),                    // was 70
+      lowestDatagramSendRateOnPacketLoss(50.0f),  // was 70
       slowModeDelay(0),
-      rttCleared(true), // Set RTT initial values as per RFC 2988.
+      rttCleared(true),  // Set RTT initial values as per RFC 2988.
       smoothedRTT(1000.0f),
       rttVariation(0.f),
       packetLossRate(0.f),
@@ -81,20 +81,20 @@ UDPMessageConnection::~UDPMessageConnection()
 {
     KNET_LOG(LogObjectAlloc, "Deleted UDPMessageConnection %p.", this);
 
-    // The first thing we do when starting to close down a connection is to ensure that this connection gets detached from its worker thread.
-    // Therefore, as the first thing, invoke CloseConnection which achieves this.
+    // The first thing we do when starting to close down a connection is to ensure that this connection gets detached
+    // from its worker thread. Therefore, as the first thing, invoke CloseConnection which achieves this.
     if (owner)
         owner->CloseConnection(this);
 
     assert(!workerThread);
 
-    while(outboundPacketAckTrack.Size() > 0)
+    while (outboundPacketAckTrack.Size() > 0)
         FreeOutboundPacketAckTrack(outboundPacketAckTrack.Front()->packetID);
 
     outboundPacketAckTrack.Clear();
 }
 
-void UDPMessageConnection::QueueInboundDatagram(const char *data, size_t numBytes)
+void UDPMessageConnection::QueueInboundDatagram(const char* data, size_t numBytes)
 {
     if (!data || numBytes == 0)
     {
@@ -103,7 +103,9 @@ void UDPMessageConnection::QueueInboundDatagram(const char *data, size_t numByte
     }
     if (numBytes > cDatagramBufferSize)
     {
-        KNET_LOG(LogError, "UDPMessageConnection::QueueInboundDatagram: Discarding received over-sized datagram (%d bytes)!", (int)numBytes);
+        KNET_LOG(LogError,
+            "UDPMessageConnection::QueueInboundDatagram: Discarding received over-sized datagram (%d bytes)!",
+            (int)numBytes);
         return;
     }
 
@@ -113,7 +115,8 @@ void UDPMessageConnection::QueueInboundDatagram(const char *data, size_t numByte
     bool success = queuedInboundDatagrams.Insert(d);
     if (!success)
     {
-        KNET_LOG(LogError, "UDPMessageConnection::QueueInboundDatagram: Dropping received datagram, since the client receive buffer is full!");
+        KNET_LOG(LogError, "UDPMessageConnection::QueueInboundDatagram: Dropping received datagram, since the client "
+                           "receive buffer is full!");
         return;
     }
 }
@@ -122,15 +125,15 @@ void UDPMessageConnection::ProcessQueuedDatagrams()
 {
     AssertInWorkerThreadContext();
 
-    while(queuedInboundDatagrams.Size() > 0)
+    while (queuedInboundDatagrams.Size() > 0)
     {
-        Datagram *d = queuedInboundDatagrams.Front();
+        Datagram* d = queuedInboundDatagrams.Front();
         ExtractMessages((const char*)d->data, d->size);
         queuedInboundDatagrams.PopFront();
     }
 }
 
-UDPMessageConnection::SocketReadResult UDPMessageConnection::ReadSocket(size_t &bytesRead)
+UDPMessageConnection::SocketReadResult UDPMessageConnection::ReadSocket(size_t& bytesRead)
 {
     AssertInWorkerThreadContext();
 
@@ -142,7 +145,9 @@ UDPMessageConnection::SocketReadResult UDPMessageConnection::ReadSocket(size_t &
     if (bytesRead > 0 && connectionState == ConnectionPending)
     {
         connectionState = ConnectionOK;
-        KNET_LOG(LogUser, "UDPMessageConnection::ReadSocket: Received data from socket %s. Transitioned from ConnectionPending to ConnectionOK state.",
+        KNET_LOG(LogUser,
+            "UDPMessageConnection::ReadSocket: Received data from socket %s. Transitioned from ConnectionPending to "
+            "ConnectionOK state.",
             (socket ? socket->ToString().c_str() : "(null)"));
     }
     if (readResult == SocketReadError)
@@ -159,7 +164,7 @@ void UDPMessageConnection::PerformPacketAckSends()
     AssertInWorkerThreadContext();
 
     tick_t now = Clock::Tick();
-    while(!inboundPacketAckTrack.empty())
+    while (!inboundPacketAckTrack.empty())
     {
         if (Clock::TimespanToMillisecondsF(inboundPacketAckTrack.begin()->second.sentTick, now) < maxAckDelay &&
             inboundPacketAckTrack.size() < 33)
@@ -182,10 +187,10 @@ UDPMessageConnection::SocketReadResult UDPMessageConnection::UDPReadSocket(size_
 
     // Cap the number of datagrams to read in a single loop to perform throttling.
     int maxReads = cMaxDatagramsToReadInOneFrame;
-    while(maxReads-- > 0)
+    while (maxReads-- > 0)
     {
         assert(socket);
-        OverlappedTransferBuffer *data = socket->BeginReceive();
+        OverlappedTransferBuffer* data = socket->BeginReceive();
         if (!data || data->bytesContains == 0)
             break;
 
@@ -208,7 +213,7 @@ UDPMessageConnection::SocketReadResult UDPMessageConnection::UDPReadSocket(size_
 }
 
 /// Checks whether any reliably sent packets have timed out.
-void UDPMessageConnection::ProcessPacketTimeouts() // [worker thread]
+void UDPMessageConnection::ProcessPacketTimeouts()  // [worker thread]
 {
     AssertInWorkerThreadContext();
 
@@ -222,16 +227,16 @@ void UDPMessageConnection::ProcessPacketTimeouts() // [worker thread]
     int numPacketsTimedOut = 0;
 
     // Check whether any reliable packets have timed out and not acked.
-    while(outboundPacketAckTrack.Size() > 0)
+    while (outboundPacketAckTrack.Size() > 0)
     {
-        PacketAckTrack *track = outboundPacketAckTrack.Front();
+        PacketAckTrack* track = outboundPacketAckTrack.Front();
         if (!track || Clock::IsNewer(track->timeoutTick, now))
-            return; // Note here: for optimization purposes, the packets will time out in the order they were sent.
+            return;  // Note here: for optimization purposes, the packets will time out in the order they were sent.
 
         ++numPacketsTimedOut;
 
-        KNET_LOG(LogVerbose, "A packet with ID %d timed out. Age: %.2fms. Contains %d messages.",
-            (int)track->packetID, (float)Clock::TimespanToMillisecondsD(track->sentTick, now), (int)track->messages.size());
+        KNET_LOG(LogVerbose, "A packet with ID %d timed out. Age: %.2fms. Contains %d messages.", (int)track->packetID,
+            (float)Clock::TimespanToMillisecondsD(track->sentTick, now), (int)track->messages.size());
         ADDEVENT("datagramsLost", 1, "");
 
         // Store a new suggestion for a lowered datagram send rate.
@@ -241,15 +246,15 @@ void UDPMessageConnection::ProcessPacketTimeouts() // [worker thread]
         UpdateRTOCounterOnPacketLoss();
 
         // Put all messages back into the outbound queue for send repriorisation.
-        for(size_t i = 0; i < track->messages.size(); ++i)
+        for (size_t i = 0; i < track->messages.size(); ++i)
 #ifdef KNET_NO_MAXHEAP
             outboundQueue.InsertWithResize(track->messages[i]);
 #else
             outboundQueue.Insert(track->messages[i]);
 #endif
 
-        // We are not going to resend the old timed out packet as-is with the old packet ID. Instead, just forget about it.
-        // The messages will go to a brand new packet with new packet ID.
+        // We are not going to resend the old timed out packet as-is with the old packet ID. Instead, just forget about
+        // it. The messages will go to a brand new packet with new packet ID.
         outboundPacketAckTrack.PopFront();
     }
 }
@@ -265,7 +270,7 @@ void UDPMessageConnection::HandleFlowControl()
     const int framesPerSec = 10;
     const int maxSlowModeDelay = 10 * framesPerSec;
 
-    const tick_t frameLength = Clock::TicksPerSec() / framesPerSec; // in ticks
+    const tick_t frameLength = Clock::TicksPerSec() / framesPerSec;  // in ticks
     const tick_t now = Clock::Tick();
 
     unsigned long numFrames = (unsigned long)(Clock::TicksInBetween(now, lastFrameTime) / frameLength);
@@ -280,8 +285,10 @@ void UDPMessageConnection::HandleFlowControl()
         if (numLossesLastFrame > 2)
         {
             float oldRate = datagramSendRate;
-            datagramSendRate = min(datagramSendRate, max(minBandwidthOnLoss, lowestDatagramSendRateOnPacketLoss * 0.9f)); // Multiplicative decreases.
-            KNET_LOG(LogVerbose, "Received %d losses. datagramSendRate backed to %.2f from %.2f", (int)numLossesLastFrame, datagramSendRate, oldRate);
+            datagramSendRate = min(datagramSendRate,
+                max(minBandwidthOnLoss, lowestDatagramSendRateOnPacketLoss * 0.9f));  // Multiplicative decreases.
+            KNET_LOG(LogVerbose, "Received %d losses. datagramSendRate backed to %.2f from %.2f",
+                (int)numLossesLastFrame, datagramSendRate, oldRate);
         }
         else
         {
@@ -305,9 +312,11 @@ void UDPMessageConnection::HandleFlowControl()
             else if (needLess && datagramSendRate > minBandwidth)
                 datagramSendRate = max(datagramSendRate * 0.98f, minBandwidth);
 
-            // Whenever slow mode or slight loss is occurring and RTT is more than the minimum RTO value, back off slowly
-            // This is to ensure we do not stay "balanced" in a state where slight loss occurs constantly due to sending too much
-            if ((numLossesLastFrame > 0 || slowModeDelay > 0) && maxRTT > minRTOTimeoutValue && datagramSendRate > minBandwidth)
+            // Whenever slow mode or slight loss is occurring and RTT is more than the minimum RTO value, back off
+            // slowly This is to ensure we do not stay "balanced" in a state where slight loss occurs constantly due to
+            // sending too much
+            if ((numLossesLastFrame > 0 || slowModeDelay > 0) && maxRTT > minRTOTimeoutValue &&
+                datagramSendRate > minBandwidth)
                 datagramSendRate = max(datagramSendRate * 0.999f, minBandwidth);
         }
 
@@ -332,7 +341,7 @@ void UDPMessageConnection::SendOutPackets()
 
     PacketSendResult result = PacketSendOK;
     int maxSends = 50;
-    while(result == PacketSendOK && TimeUntilCanSendPacket() == 0 && maxSends-- > 0)
+    while (result == PacketSendOK && TimeUntilCanSendPacket() == 0 && maxSends-- > 0)
         result = SendOutPacket();
 }
 
@@ -365,11 +374,11 @@ MessageConnection::PacketSendResult UDPMessageConnection::SendOutPacket()
     if (!CanSendOutNewDatagram())
         return PacketSendThrottled;
 
-    OverlappedTransferBuffer *data = socket->BeginSend(socket->MaxSendSize());
+    OverlappedTransferBuffer* data = socket->BeginSend(socket->MaxSendSize());
     if (!data)
         return PacketSendThrottled;
 
-//    const size_t minSendSize = 1;
+    //    const size_t minSendSize = 1;
     const size_t maxSendSize = socket->MaxSendSize();
 
     // Push out all the pending data to the socket.
@@ -380,7 +389,8 @@ MessageConnection::PacketSendResult UDPMessageConnection::SendOutPacket()
     // If true, the packet contains in-order deliverable messages.
     bool inOrder = false;
 
-    int packetSizeInBytes = 7; // The datagram header takes up 3-7 bytes. (PacketID + Flags take at least three bytes to start with)
+    int packetSizeInBytes =
+        7;  // The datagram header takes up 3-7 bytes. (PacketID + Flags take at least three bytes to start with)
     const int cBytesForInOrderDeltaCounter = 2;
 
     unsigned long smallestReliableMessageNumber = 0xFFFFFFFF;
@@ -388,12 +398,12 @@ MessageConnection::PacketSendResult UDPMessageConnection::SendOutPacket()
     skippedMessages.clear();
 
     // Fill up the rest of the packet from messages from the outbound queue.
-    while(outboundQueue.Size() > 0)
+    while (outboundQueue.Size() > 0)
     {
 #ifdef KNET_NO_MAXHEAP
-        NetworkMessage *msg = *outboundQueue.Front();
+        NetworkMessage* msg = *outboundQueue.Front();
 #else
-        NetworkMessage *msg = outboundQueue.Front();
+        NetworkMessage* msg = outboundQueue.Front();
 #endif
         if (msg->obsolete)
         {
@@ -413,9 +423,10 @@ MessageConnection::PacketSendResult UDPMessageConnection::SendOutPacket()
             {
                 bool success = sends->AllocateFragmentedTransferID(*msg->transfer);
 
-                if (!success) // No transferIDs free - skip this message for now.
+                if (!success)  // No transferIDs free - skip this message for now.
                 {
-                    KNET_LOG(LogError, "Throttling fragmented transfer send! No free TransferID to start a new fragmented transfer with!");
+                    KNET_LOG(LogError, "Throttling fragmented transfer send! No free TransferID to start a new "
+                                       "fragmented transfer with!");
                     outboundQueue.PopFront();
                     skippedMessages.push_back(msg);
                     continue;
@@ -425,15 +436,21 @@ MessageConnection::PacketSendResult UDPMessageConnection::SendOutPacket()
 
         // We need to add extra 2 bytes for the VLE-encoded InOrder PacketID delta counter.
         // Estimate the size the per-message header consumes at most.
-        // This computation is not exact, but as it only needs to be an upper bound, keeping it simple is good. \todo Can be more precise here.
-        int totalMessageSize = msg->GetTotalDatagramPackedSize();// + ((msg->inOrder && !inOrder) ? cBytesForInOrderDeltaCounter : 0);
+        // This computation is not exact, but as it only needs to be an upper bound, keeping it simple is good. \todo
+        // Can be more precise here.
+        int totalMessageSize =
+            msg->GetTotalDatagramPackedSize();  // + ((msg->inOrder && !inOrder) ? cBytesForInOrderDeltaCounter : 0);
 
-        // If this message won't fit into the buffer, send out all the previously gathered messages (there must at least be one previously submitted message).
+        // If this message won't fit into the buffer, send out all the previously gathered messages (there must at least
+        // be one previously submitted message).
         if (!datagramSerializedMessages.empty() && (size_t)packetSizeInBytes + totalMessageSize >= maxSendSize)
             break;
 
         if (totalMessageSize > (int)maxSendSize)
-            KNET_LOG(LogError, "Warning: Sending out a message of ID %d and size %d bytes, but UDP socket max send size is only %d bytes!", (int)msg->id, totalMessageSize, (int)maxSendSize);
+            KNET_LOG(LogError,
+                "Warning: Sending out a message of ID %d and size %d bytes, but UDP socket max send size is only %d "
+                "bytes!",
+                (int)msg->id, totalMessageSize, (int)maxSendSize);
 
         datagramSerializedMessages.push_back(msg);
         outboundQueue.PopFront();
@@ -443,31 +460,40 @@ MessageConnection::PacketSendResult UDPMessageConnection::SendOutPacket()
         if (msg->reliable)
         {
             reliable = true;
-            smallestReliableMessageNumber = (smallestReliableMessageNumber == 0xFFFFFFFF) ? msg->reliableMessageNumber : PrecedingMessageNumber(smallestReliableMessageNumber, msg->reliableMessageNumber);
+            smallestReliableMessageNumber =
+                (smallestReliableMessageNumber == 0xFFFFFFFF)
+                    ? msg->reliableMessageNumber
+                    : PrecedingMessageNumber(smallestReliableMessageNumber, msg->reliableMessageNumber);
         }
 
         if (msg->inOrder)
             inOrder = true;
     }
 
-    // Ensure that the range of the message numbers is within the capacity that the protocol can represent in the byte stream.
-    for(size_t i = 0; i < datagramSerializedMessages.size(); ++i)
+    // Ensure that the range of the message numbers is within the capacity that the protocol can represent in the byte
+    // stream.
+    for (size_t i = 0; i < datagramSerializedMessages.size(); ++i)
         if (datagramSerializedMessages[i]->reliable)
         {
-            u32 reliableDelta = (u32)(datagramSerializedMessages[i]->reliableMessageNumber - smallestReliableMessageNumber);
-            if (reliableDelta > VLE8_16::maxValue) // We use a VLE8_16 to store deltas, so 32767 is the largest delta we can store. If two messages have a delta larger than this,
-            {                                      // they will have to be serialized in separate datagrams.
-                KNET_LOG(LogError, "UDPMessageConnection::SendOutPacket: Too large msgnum delta present - skipping serialization of message with ID %d (lowest: %d, delta: %d)",
-                    (int)datagramSerializedMessages[i]->reliableMessageNumber, (int)smallestReliableMessageNumber, (int)reliableDelta);
+            u32 reliableDelta =
+                (u32)(datagramSerializedMessages[i]->reliableMessageNumber - smallestReliableMessageNumber);
+            if (reliableDelta > VLE8_16::maxValue)  // We use a VLE8_16 to store deltas, so 32767 is the largest delta
+                                                    // we can store. If two messages have a delta larger than this,
+            {                                       // they will have to be serialized in separate datagrams.
+                KNET_LOG(LogError,
+                    "UDPMessageConnection::SendOutPacket: Too large msgnum delta present - skipping serialization of "
+                    "message with ID %d (lowest: %d, delta: %d)",
+                    (int)datagramSerializedMessages[i]->reliableMessageNumber, (int)smallestReliableMessageNumber,
+                    (int)reliableDelta);
                 skippedMessages.push_back(datagramSerializedMessages[i]);
                 datagramSerializedMessages.erase(datagramSerializedMessages.begin() + i);
                 --i;
             }
         }
 
-    // If we had skipped any messages from the outbound queue while looking for good messages to send, put all the messages
-    // we skipped back to the outbound queue to wait to be processed during subsequent frames.
-    for(size_t i = 0; i < skippedMessages.size(); ++i)
+    // If we had skipped any messages from the outbound queue while looking for good messages to send, put all the
+    // messages we skipped back to the outbound queue to wait to be processed during subsequent frames.
+    for (size_t i = 0; i < skippedMessages.size(); ++i)
 #ifdef KNET_NO_MAXHEAP
         outboundQueue.InsertWithResize(skippedMessages[i]);
 #else
@@ -478,7 +504,7 @@ MessageConnection::PacketSendResult UDPMessageConnection::SendOutPacket()
     DataSerializer writer(data->buffer.buf, data->buffer.len);
 
     const packet_id_t packetID = datagramPacketIDCounter;
-    writer.Add<u8>((u8)((packetID & 63) | ((reliable ? 1 : 0) << 6)  | ((inOrder ? 1 : 0) << 7)));
+    writer.Add<u8>((u8)((packetID & 63) | ((reliable ? 1 : 0) << 6) | ((inOrder ? 1 : 0) << 7)));
     writer.Add<u16>((u16)(packetID >> 6));
     if (reliable)
     {
@@ -490,13 +516,15 @@ MessageConnection::PacketSendResult UDPMessageConnection::SendOutPacket()
     bool sentDisconnectAckMessage = false;
 
     // Write all the messages in this UDP packet.
-    for(size_t i = 0; i < datagramSerializedMessages.size(); ++i)
+    for (size_t i = 0; i < datagramSerializedMessages.size(); ++i)
     {
-        NetworkMessage *msg = datagramSerializedMessages[i];
+        NetworkMessage* msg = datagramSerializedMessages[i];
         assert(!msg->transfer || msg->transfer->id != -1);
 
-        const int encodedMsgIdLength = (msg->transfer == 0 || msg->fragmentIndex == 0) ? VLE8_16_32::GetEncodedBitLength(msg->id)/8 : 0;
-        const size_t messageContentSize = msg->dataSize + encodedMsgIdLength; // 1/2/4 bytes: Message ID. X bytes: Content.
+        const int encodedMsgIdLength =
+            (msg->transfer == 0 || msg->fragmentIndex == 0) ? VLE8_16_32::GetEncodedBitLength(msg->id) / 8 : 0;
+        const size_t messageContentSize =
+            msg->dataSize + encodedMsgIdLength;  // 1/2/4 bytes: Message ID. X bytes: Content.
         assert(messageContentSize < (1 << 11));
 
         if (msg->id == MsgIdDisconnect)
@@ -522,16 +550,16 @@ MessageConnection::PacketSendResult UDPMessageConnection::SendOutPacket()
         if (fragmentedTransfer != 0)
             writer.Add<u8>((u8)msg->transfer->id);
         if (firstFragment == 0 && fragmentedTransfer != 0)
-            writer.AddVLE<VLE8_16_32>(msg->fragmentIndex); // The message fragment number.
+            writer.AddVLE<VLE8_16_32>(msg->fragmentIndex);  // The message fragment number.
         if (msg->transfer == 0 || msg->fragmentIndex == 0)
-            writer.AddVLE<VLE8_16_32>(msg->id); // Add the message ID number.
-        if (msg->dataSize > 0) // Add the actual message payload data.
+            writer.AddVLE<VLE8_16_32>(msg->id);  // Add the message ID number.
+        if (msg->dataSize > 0)                   // Add the actual message payload data.
         {
             if (networkSendSimulator.enabled &&
                 (networkSendSimulator.corruptionType == NetworkSimulator::CorruptPayload ||
-                (networkSendSimulator.corruptionType == NetworkSimulator::CorruptMessageType &&
-                 msg->id == networkSendSimulator.corruptMessageId)))
-                 networkSendSimulator.MaybeCorruptBufferToggleBits(msg->data, msg->dataSize);
+                    (networkSendSimulator.corruptionType == NetworkSimulator::CorruptMessageType &&
+                        msg->id == networkSendSimulator.corruptMessageId)))
+                networkSendSimulator.MaybeCorruptBufferToggleBits(msg->data, msg->dataSize);
             writer.AddAlignedByteArray(msg->data, msg->dataSize);
         }
     }
@@ -541,27 +569,29 @@ MessageConnection::PacketSendResult UDPMessageConnection::SendOutPacket()
     bool success;
 
     if (!networkSendSimulator.enabled)
-        success = socket->EndSend(data); // Send the data out.
+        success = socket->EndSend(data);  // Send the data out.
     else
     {
         // We're running a network simulator. Pass the buffer to networkSendSimulator for delayed sending.
         networkSendSimulator.SubmitSendBuffer(data, socket);
-        success = true; // Act here as if we succeeded.
+        success = true;  // Act here as if we succeeded.
     }
 
     if (!success)
     {
-        // We failed, so put all messages back to the outbound queue, except for those that are from old in-order packet,
-        // since they need to be resent with the old packet ID and not as fresh messages.
-        for(size_t i = 0; i < datagramSerializedMessages.size(); ++i)
+        // We failed, so put all messages back to the outbound queue, except for those that are from old in-order
+        // packet, since they need to be resent with the old packet ID and not as fresh messages.
+        for (size_t i = 0; i < datagramSerializedMessages.size(); ++i)
             outboundQueue.Insert(datagramSerializedMessages[i]);
 
-        KNET_LOG(LogError, "UDPMessageConnection::SendOutPacket: Socket::EndSend failed to socket %s!", socket->ToString().c_str());
+        KNET_LOG(LogError, "UDPMessageConnection::SendOutPacket: Socket::EndSend failed to socket %s!",
+            socket->ToString().c_str());
         return PacketSendSocketFull;
     }
 
-    // Sending the datagram succeeded - increment the send count of each message by one, to remember the retry timeout count.
-    for(size_t i = 0; i < datagramSerializedMessages.size(); ++i)
+    // Sending the datagram succeeded - increment the send count of each message by one, to remember the retry timeout
+    // count.
+    for (size_t i = 0; i < datagramSerializedMessages.size(); ++i)
     {
         ++datagramSerializedMessages[i]->sendCount;
 
@@ -602,14 +632,15 @@ MessageConnection::PacketSendResult UDPMessageConnection::SendOutPacket()
         const tick_t now = Clock::Tick();
         ack.sendCount = 1;
         ack.sentTick = now;
-        retransmissionTimeout = 5000.f; ///\todo Remove this.
+        retransmissionTimeout = 5000.f;  ///\todo Remove this.
         ack.timeoutTick = now + (tick_t)((double)retransmissionTimeout * Clock::TicksPerMillisecond());
         ack.datagramSendRate = datagramSendRate;
 
-        for(size_t i = 0; i < datagramSerializedMessages.size(); ++i)
+        for (size_t i = 0; i < datagramSerializedMessages.size(); ++i)
         {
             if (datagramSerializedMessages[i]->reliable)
-                ack.messages.push_back(datagramSerializedMessages[i]); // The ownership of these messages is transferred into this struct.
+                ack.messages.push_back(
+                    datagramSerializedMessages[i]);  // The ownership of these messages is transferred into this struct.
             else
             {
                 ClearOutboundMessageWithContentID(datagramSerializedMessages[i]);
@@ -618,10 +649,10 @@ MessageConnection::PacketSendResult UDPMessageConnection::SendOutPacket()
         }
         outboundPacketAckTrack.InsertWithResize(ack);
     }
-    else // We sent an unreliable datagram.
+    else  // We sent an unreliable datagram.
     {
         // This is send-and-forget, we can free all the message data we just sent.
-        for(size_t i = 0; i < datagramSerializedMessages.size(); ++i)
+        for (size_t i = 0; i < datagramSerializedMessages.size(); ++i)
         {
             ClearOutboundMessageWithContentID(datagramSerializedMessages[i]);
             FreeMessage(datagramSerializedMessages[i]);
@@ -638,7 +669,8 @@ MessageConnection::PacketSendResult UDPMessageConnection::SendOutPacket()
             connectionState = ConnectionClosed;
         if (socket)
             socket->MarkWriteClosed();
-        KNET_LOG(LogInfo, "UDPMessageConnection::SendOutPacket: Send Disconnect from connection %s.", ToString().c_str());
+        KNET_LOG(
+            LogInfo, "UDPMessageConnection::SendOutPacket: Send Disconnect from connection %s.", ToString().c_str());
     }
     // If we sent out the DisconnectAck message, we can tear down the connection right now - we're finished.
     if (sentDisconnectAckMessage)
@@ -649,10 +681,12 @@ MessageConnection::PacketSendResult UDPMessageConnection::SendOutPacket()
             socket->MarkWriteClosed();
         }
         connectionState = ConnectionClosed;
-        KNET_LOG(LogInfo, "UDPMessageConnection::SendOutPacket: Send DisconnectAck from connection %s.", ToString().c_str());
+        KNET_LOG(
+            LogInfo, "UDPMessageConnection::SendOutPacket: Send DisconnectAck from connection %s.", ToString().c_str());
     }
 
-    KNET_LOG(LogVerbose, "UDPMessageConnection::SendOutPacket: Socket::EndSend succeeded with %d bytes.", (int)writer.BytesFilled());
+    KNET_LOG(LogVerbose, "UDPMessageConnection::SendOutPacket: Socket::EndSend succeeded with %d bytes.",
+        (int)writer.BytesFilled());
     return PacketSendOK;
 }
 
@@ -684,14 +718,14 @@ void UDPMessageConnection::DoUpdateConnection()
         udpUpdateTimer.StartMSecs(10.f);
     }
 
-/*
-    if (statsUpdateTimer.TriggeredOrNotRunning())
-    {
-        ///\todo Put this behind a timer - update only once every 1 sec or so.
-        ComputePacketLoss();
-        statsUpdateTimer.StartMSecs(1000.f);
-    }
-*/
+    /*
+        if (statsUpdateTimer.TriggeredOrNotRunning())
+        {
+            ///\todo Put this behind a timer - update only once every 1 sec or so.
+            ComputePacketLoss();
+            statsUpdateTimer.StartMSecs(1000.f);
+        }
+    */
 }
 
 unsigned long UDPMessageConnection::TimeUntilCanSendPacket() const
@@ -704,7 +738,7 @@ unsigned long UDPMessageConnection::TimeUntilCanSendPacket() const
     const tick_t nextDatagramSendTime = lastDatagramSendTime + datagramSendTickDelay;
 
     if (Clock::IsNewer(now, nextDatagramSendTime))
-        return 0; // We are already due to send out the next datagram?
+        return 0;  // We are already due to send out the next datagram?
 
     return (unsigned long)Clock::TimespanToMillisecondsF(now, nextDatagramSendTime);
 }
@@ -721,7 +755,8 @@ void UDPMessageConnection::AddReceivedPacketIDStats(packet_id_t packetID)
     /* \todo add back to enable packet loss computations.
     ConnectionStatistics &cs = statistics.Lock();
 
-    // Simple method to prevent computation errors caused by wraparound - we start from scratch when packet with ID 0 is received.
+    // Simple method to prevent computation errors caused by wraparound - we start from scratch when packet with ID 0 is
+received.
 //    if (packetID == 0)
 //        cs.recvPacketIDs.clear();
 
@@ -738,7 +773,7 @@ void UDPMessageConnection::AddReceivedPacketIDStats(packet_id_t packetID)
     previousReceivedPacketID = packetID;
 }
 
-void UDPMessageConnection::ExtractMessages(const char *data, size_t numBytes)
+void UDPMessageConnection::ExtractMessages(const char* data, size_t numBytes)
 {
     AssertInWorkerThreadContext();
 
@@ -760,7 +795,10 @@ void UDPMessageConnection::ExtractMessages(const char *data, size_t numBytes)
 
     if (numBytes < 3)
     {
-        KNET_LOG(LogError, "Malformed UDP packet when reading packet header! Size = %d bytes, no space for packet header, which is at least 3 bytes.", (int)numBytes);
+        KNET_LOG(LogError,
+            "Malformed UDP packet when reading packet header! Size = %d bytes, no space for packet header, which is at "
+            "least 3 bytes.",
+            (int)numBytes);
         throw NetException("Malformed UDP packet received! No packed header present.");
     }
 
@@ -772,12 +810,13 @@ void UDPMessageConnection::ExtractMessages(const char *data, size_t numBytes)
     bool packetReliable = (flags & (1 << 6)) != 0;
     packet_id_t packetID = (reader.Read<u16>() << 6) | (flags & 63);
 
-    unsigned long reliableMessageIndexBase = (packetReliable ? reader.ReadVLE<VLE16_32>() : 0); ///\todo sanitize input length.
+    unsigned long reliableMessageIndexBase =
+        (packetReliable ? reader.ReadVLE<VLE16_32>() : 0);  ///\todo sanitize input length.
 
     // If the 'reliable'-flag is set, remember this PacketID, we need to Ack it later on.
     if (packetReliable)
     {
-        PacketAckTrack &t = inboundPacketAckTrack[packetID];
+        PacketAckTrack& t = inboundPacketAckTrack[packetID];
         t.packetID = packetID;
         // The following are not used right now.
         ///\todo If we want to queue up a few acks before sending an ack message, we should possibly save here
@@ -801,20 +840,23 @@ void UDPMessageConnection::ExtractMessages(const char *data, size_t numBytes)
     packet_id_t inOrderID = 0;
     if (inOrder)
     {
-//        inOrderID = reader.ReadVLE<VLE8_16>();
+        //        inOrderID = reader.ReadVLE<VLE8_16>();
         if (inOrderID == DataDeserializer::VLEReadError)
         {
-            KNET_LOG(LogError, "Malformed UDP packet! Size = %d bytes, no space for packet header field 'inOrder'!", (int)numBytes);
+            KNET_LOG(LogError, "Malformed UDP packet! Size = %d bytes, no space for packet header field 'inOrder'!",
+                (int)numBytes);
             throw NetException("Malformed UDP packet received! The inOrder field was invalid.");
         }
     }
 
     size_t numMessagesReceived = 0;
-    while(reader.BytesLeft() > 0)
+    while (reader.BytesLeft() > 0)
     {
         if (reader.BytesLeft() < 2)
         {
-            KNET_LOG(LogError, "Malformed UDP packet! Parsed %d messages ok, but after that there's not enough space for UDP message header! BytePos %d, total size %d",
+            KNET_LOG(LogError,
+                "Malformed UDP packet! Parsed %d messages ok, but after that there's not enough space for UDP message "
+                "header! BytePos %d, total size %d",
                 (int)reader.BytePos(), (int)numBytes);
             throw NetException("Malformed UDP packet received! Message header was not present.");
         }
@@ -822,13 +864,14 @@ void UDPMessageConnection::ExtractMessages(const char *data, size_t numBytes)
         // Read the message header (2 bytes at least).
         u16 contentLength = reader.Read<u16>();
         bool fragmentStart = (contentLength & (1 << 15)) != 0;
-        bool fragment = (contentLength & (1 << 14)) != 0 || fragmentStart; // If fragmentStart is set, then fragment is set.
+        bool fragment =
+            (contentLength & (1 << 14)) != 0 || fragmentStart;  // If fragmentStart is set, then fragment is set.
         bool inOrder = (contentLength & (1 << 13)) != 0;
         bool messageReliable = (contentLength & (1 << 12)) != 0;
         contentLength &= (1 << 11) - 1;
 
-        // If true, this message is a duplicate one we've received, and will be discarded. We need to parse it fully though,
-        // to be able to parse the messages that come after it.
+        // If true, this message is a duplicate one we've received, and will be discarded. We need to parse it fully
+        // though, to be able to parse the messages that come after it.
         bool duplicateMessage = false;
 
         unsigned long reliableMessageNumber = 0;
@@ -847,7 +890,10 @@ void UDPMessageConnection::ExtractMessages(const char *data, size_t numBytes)
 
         if (contentLength == 0)
         {
-            KNET_LOG(LogError, "Malformed UDP packet! Byteofs %d, Packet length %d. Message had zero length (Length must be at least one byte)!", (int)reader.BytePos(), (int)numBytes);
+            KNET_LOG(LogError,
+                "Malformed UDP packet! Byteofs %d, Packet length %d. Message had zero length (Length must be at least "
+                "one byte)!",
+                (int)reader.BytePos(), (int)numBytes);
             throw NetException("Malformed UDP packet received! Messages with zero content length are not valid.");
         }
 
@@ -857,7 +903,9 @@ void UDPMessageConnection::ExtractMessages(const char *data, size_t numBytes)
 
         if (reader.BytesLeft() < contentLength)
         {
-            KNET_LOG(LogError, "Malformed UDP packet! Byteofs %d, Packet length %d. Expected %d bytes of message content, but only %d bytes left!",
+            KNET_LOG(LogError,
+                "Malformed UDP packet! Byteofs %d, Packet length %d. Expected %d bytes of message content, but only %d "
+                "bytes left!",
                 (int)reader.BytePos(), (int)numBytes, (int)contentLength, (int)reader.BytesLeft());
             throw NetException("Malformed UDP packet received! Message payload missing.");
         }
@@ -869,31 +917,36 @@ void UDPMessageConnection::ExtractMessages(const char *data, size_t numBytes)
             {
                 if (numTotalFragments == DataDeserializer::VLEReadError || numTotalFragments <= 1)
                 {
-                    KNET_LOG(LogError, "Malformed UDP packet! This packet had fragmentStart bit on, but parsing numTotalFragments VLE failed!");
-                    throw NetException("Malformed UDP packet received! This packet had fragmentStart bit on, but parsing numTotalFragments VLE failed!");
+                    KNET_LOG(LogError, "Malformed UDP packet! This packet had fragmentStart bit on, but parsing "
+                                       "numTotalFragments VLE failed!");
+                    throw NetException("Malformed UDP packet received! This packet had fragmentStart bit on, but "
+                                       "parsing numTotalFragments VLE failed!");
                 }
 
-                fragmentedReceives.NewFragmentStartReceived(fragmentTransferID, numTotalFragments, &data[reader.BytePos()], contentLength);
+                fragmentedReceives.NewFragmentStartReceived(
+                    fragmentTransferID, numTotalFragments, &data[reader.BytePos()], contentLength);
                 ADDEVENT("FragmentStartReceived", 1, "");
-
             }
-            // If we received a fragment that is a part of an old fragmented transfer, pass it to the fragmented transfer manager
-            // so that it can reconstruct the final stream when the transfer finishes.
+            // If we received a fragment that is a part of an old fragmented transfer, pass it to the fragmented
+            // transfer manager so that it can reconstruct the final stream when the transfer finishes.
             else if (fragment)
             {
                 if (fragmentNumber == DataDeserializer::VLEReadError)
                 {
-                    KNET_LOG(LogError, "Malformed UDP packet! This packet has fragment flag on, but parsing the fragment number failed!");
-                    throw NetException("Malformed UDP packet received! This packet has fragment flag on, but parsing the fragment number failed!");
+                    KNET_LOG(LogError, "Malformed UDP packet! This packet has fragment flag on, but parsing the "
+                                       "fragment number failed!");
+                    throw NetException("Malformed UDP packet received! This packet has fragment flag on, but parsing "
+                                       "the fragment number failed!");
                 }
 
                 ADDEVENT("FragmentReceived", 1, "");
 
-                bool messageReady = fragmentedReceives.NewFragmentReceived(fragmentTransferID, fragmentNumber, &data[reader.BytePos()], contentLength);
+                bool messageReady = fragmentedReceives.NewFragmentReceived(
+                    fragmentTransferID, fragmentNumber, &data[reader.BytePos()], contentLength);
                 if (messageReady)
                 {
-                    // This was the last fragment of the whole message - reconstruct the message from the fragments and pass it on to
-                    // the client to handle.
+                    // This was the last fragment of the whole message - reconstruct the message from the fragments and
+                    // pass it on to the client to handle.
                     assembledData.clear();
                     fragmentedReceives.AssembleMessage(fragmentTransferID, assembledData);
                     assert(!assembledData.empty());
@@ -910,10 +963,11 @@ void UDPMessageConnection::ExtractMessages(const char *data, size_t numBytes)
                 ++numMessagesReceived;
             }
         }
-        else // this is a duplicate reliable message, ignore it.
+        else  // this is a duplicate reliable message, ignore it.
         {
             ///\todo Can we remove this duplicate reliable message checking?
-            KNET_LOG(LogVerbose, "Received a duplicate reliable message with message number %d!", (int)reliableMessageNumber);
+            KNET_LOG(LogVerbose, "Received a duplicate reliable message with message number %d!",
+                (int)reliableMessageNumber);
         }
 
         reader.SkipBytes(contentLength);
@@ -956,8 +1010,9 @@ void UDPMessageConnection::SendDisconnectMessage(bool isInternal)
 {
     AssertInMainThreadContext();
 
-    NetworkMessage *msg = StartNewMessage(MsgIdDisconnect, 0);
-    msg->priority = NetworkMessage::cMaxPriority; ///\todo Highest or lowest priority depending on whether to finish all pending messages?
+    NetworkMessage* msg = StartNewMessage(MsgIdDisconnect, 0);
+    msg->priority = NetworkMessage::cMaxPriority;  ///\todo Highest or lowest priority depending on whether to finish
+                                                   /// all pending messages?
     msg->reliable = true;
 #ifdef KNET_NETWORK_PROFILING
     msg->profilerName = "Disconnect (0x3FFFFFFF)";
@@ -971,37 +1026,38 @@ void UDPMessageConnection::SendDisconnectAckMessage()
 {
     AssertInWorkerThreadContext();
 
-    NetworkMessage *msg = StartNewMessage(MsgIdDisconnectAck, 0);
-    msg->priority = NetworkMessage::cMaxPriority; ///\todo Highest or lowest priority depending on whether to finish all pending messages?
+    NetworkMessage* msg = StartNewMessage(MsgIdDisconnectAck, 0);
+    msg->priority = NetworkMessage::cMaxPriority;  ///\todo Highest or lowest priority depending on whether to finish
+                                                   /// all pending messages?
     msg->reliable = false;
 #ifdef KNET_NETWORK_PROFILING
     msg->profilerName = "DisconnectAck (0x3FFFFFFE)";
 #endif
-    EndAndQueueMessage(msg, 0, true); ///\todo Check this flag!
+    EndAndQueueMessage(msg, 0, true);  ///\todo Check this flag!
 
     KNET_LOG(LogInfo, "UDPMessageConnection::SendDisconnectAckMessage: Sent DisconnectAck.");
 }
 
-int UDPMessageConnection::BiasedBinarySearchFindPacketIndex(PacketAckTrackQueue &queue, packet_id_t packetID)
+int UDPMessageConnection::BiasedBinarySearchFindPacketIndex(PacketAckTrackQueue& queue, packet_id_t packetID)
 {
     ///\bug Make this all packetID wrap-around -aware.
 
     int headIdx = 0;
-    PacketAckTrack *headItem = queue.ItemAt(headIdx);
+    PacketAckTrack* headItem = queue.ItemAt(headIdx);
     if (headItem->packetID == packetID)
         return headIdx;
-    int tailIdx = queue.Size()-1;
-    PacketAckTrack *tailItem = queue.ItemAt(tailIdx);
+    int tailIdx = queue.Size() - 1;
+    PacketAckTrack* tailItem = queue.ItemAt(tailIdx);
     if (tailItem->packetID == packetID)
         return tailIdx;
     assert(headItem->packetID < tailItem->packetID);
     if (headItem->packetID > packetID || tailItem->packetID < packetID)
         return -1;
-    while(headIdx < tailIdx)
+    while (headIdx < tailIdx)
     {
         int newIdx = (tailIdx - headIdx) * (packetID - headItem->packetID) / (tailItem->packetID - headItem->packetID);
-        newIdx = max(headIdx+1, min(tailIdx-1, newIdx));
-        PacketAckTrack *newItem = queue.ItemAt(newIdx);
+        newIdx = max(headIdx + 1, min(tailIdx - 1, newIdx));
+        PacketAckTrack* newItem = queue.ItemAt(newIdx);
         if (newItem->packetID == packetID)
             return newIdx;
         else if (newItem->packetID < packetID)
@@ -1023,15 +1079,15 @@ void UDPMessageConnection::FreeOutboundPacketAckTrack(packet_id_t packetID)
     AssertInWorkerThreadContext();
 
     int itemIndex = 0;
-    for(; itemIndex < outboundPacketAckTrack.Size(); ++itemIndex)
+    for (; itemIndex < outboundPacketAckTrack.Size(); ++itemIndex)
         if (outboundPacketAckTrack.ItemAt(itemIndex)->packetID == packetID)
             break;
     if (itemIndex >= outboundPacketAckTrack.Size())
         return;
 
     // Free up all the messages in the acked packet. We don't need to keep track of those any more (to be sent to peer).
-    PacketAckTrack &track = *outboundPacketAckTrack.ItemAt(itemIndex);
-    for(size_t i = 0; i < track.messages.size(); ++i)
+    PacketAckTrack& track = *outboundPacketAckTrack.ItemAt(itemIndex);
+    for (size_t i = 0; i < track.messages.size(); ++i)
     {
         // If the message was part of a fragmented transfer, remove the message from that data structure.
         if (track.messages[i]->transfer)
@@ -1080,7 +1136,8 @@ void UDPMessageConnection::UpdateRTOCounterOnPacketAck(float rtt)
     // in excellent conditions (localhost, LAN).
     const float safetyThresholdMul = 2.f;
 
-    retransmissionTimeout = min(maxRTOTimeoutValue, max(minRTOTimeoutValue, safetyThresholdMul * (smoothedRTT + rttVariation)));
+    retransmissionTimeout =
+        min(maxRTOTimeoutValue, max(minRTOTimeoutValue, safetyThresholdMul * (smoothedRTT + rttVariation)));
 }
 
 void UDPMessageConnection::UpdateRTOCounterOnPacketLoss()
@@ -1095,20 +1152,21 @@ void UDPMessageConnection::UpdateRTOCounterOnPacketLoss()
 
     ++numLossesLastFrame;
 
-    //    KNET_LOG(LogVerbose, "Packet loss event: RTO: %.3f sec. datagramSendRate: %.2f", retransmissionTimeout, datagramSendRate);
+    //    KNET_LOG(LogVerbose, "Packet loss event: RTO: %.3f sec. datagramSendRate: %.2f", retransmissionTimeout,
+    //    datagramSendRate);
 }
 
 void UDPMessageConnection::SendPacketAckMessage()
 {
     AssertInWorkerThreadContext();
 
-    while(!inboundPacketAckTrack.empty())
+    while (!inboundPacketAckTrack.empty())
     {
         packet_id_t packetID = inboundPacketAckTrack.begin()->first;
         u32 sequence = 0;
 
         inboundPacketAckTrack.erase(packetID);
-        for(int i = 0; i < 32; ++i)
+        for (int i = 0; i < 32; ++i)
         {
             packet_id_t id = AddPacketID(packetID, i + 1);
 
@@ -1120,7 +1178,7 @@ void UDPMessageConnection::SendPacketAckMessage()
             }
         }
 
-        NetworkMessage *msg = StartNewMessage(MsgIdPacketAck, 7);
+        NetworkMessage* msg = StartNewMessage(MsgIdPacketAck, 7);
         DataSerializer mb(msg->data, 7);
         mb.Add<u8>((u8)(packetID & 0xFF));
         mb.Add<u16>((u16)(packetID >> 8));
@@ -1133,7 +1191,7 @@ void UDPMessageConnection::SendPacketAckMessage()
     }
 }
 
-void UDPMessageConnection::HandlePacketAckMessage(const char *data, size_t numBytes)
+void UDPMessageConnection::HandlePacketAckMessage(const char* data, size_t numBytes)
 {
     AssertInWorkerThreadContext();
 
@@ -1150,7 +1208,7 @@ void UDPMessageConnection::HandlePacketAckMessage(const char *data, size_t numBy
     u32 sequence = mr.Read<u32>();
 
     FreeOutboundPacketAckTrack(packetID);
-    for(size_t i = 0; i < 32; ++i)
+    for (size_t i = 0; i < 32; ++i)
         if ((sequence & (1 << i)) != 0)
         {
             packet_id_t id = AddPacketID(packetID, 1 + i);
@@ -1165,7 +1223,8 @@ void UDPMessageConnection::HandleDisconnectMessage()
     if (connectionState != ConnectionClosed)
         connectionState = ConnectionDisconnecting;
     else
-        KNET_LOG(LogError, "UDPMessageConnection::HandleDisconnectMessage: Received Disconnect message when in ConnectionClosed state!");
+        KNET_LOG(LogError, "UDPMessageConnection::HandleDisconnectMessage: Received Disconnect message when in "
+                           "ConnectionClosed state!");
 
     if (socket)
     {
@@ -1185,10 +1244,13 @@ void UDPMessageConnection::HandleDisconnectAckMessage()
     }
 
     if (connectionState != ConnectionDisconnecting)
-        KNET_LOG(LogInfo, "Received DisconnectAck message on a MessageConnection not in ConnectionDisconnecting state! (state was %d)",
-        (int)connectionState);
+        KNET_LOG(LogInfo,
+            "Received DisconnectAck message on a MessageConnection not in ConnectionDisconnecting state! (state was "
+            "%d)",
+            (int)connectionState);
     else
-        KNET_LOG(LogInfo, "UDPMessageConnection::HandleDisconnectAckMessage: Connection closed to %s.", ToString().c_str());
+        KNET_LOG(
+            LogInfo, "UDPMessageConnection::HandleDisconnectAckMessage: Connection closed to %s.", ToString().c_str());
 
     connectionState = ConnectionClosed;
 }
@@ -1210,7 +1272,7 @@ void UDPMessageConnection::ComputePacketLoss()
     const tick_t maxTickAge = timeNow - maxEntryAge;
 
     // Remove old entries.
-    for(size_t i = 0; i < cs->recvPacketIDs.size(); ++i)
+    for (size_t i = 0; i < cs->recvPacketIDs.size(); ++i)
         if (Clock::IsNewer(cs->recvPacketIDs[i].tick, maxTickAge))
         {
             cs->recvPacketIDs.erase(cs->recvPacketIDs.begin(), cs->recvPacketIDs.begin() + i);
@@ -1225,67 +1287,69 @@ void UDPMessageConnection::ComputePacketLoss()
 
     // Find the oldest packet (in terms of messageID)
     int oldestIndex = 0;
-    for(size_t i = 1; i < cs->recvPacketIDs.size(); ++i)
+    for (size_t i = 1; i < cs->recvPacketIDs.size(); ++i)
         if (PacketIDIsNewerThan(cs->recvPacketIDs[oldestIndex].packetID, cs->recvPacketIDs[i].packetID))
             oldestIndex = i;
 
     std::vector<packet_id_t> relIDs;
     relIDs.reserve(cs->recvPacketIDs.size());
-    for(size_t i = 0; i < cs->recvPacketIDs.size(); ++i)
+    for (size_t i = 0; i < cs->recvPacketIDs.size(); ++i)
         relIDs.push_back(SubPacketID(cs->recvPacketIDs[i].packetID, cs->recvPacketIDs[oldestIndex].packetID));
 
     sort::CocktailSort(&relIDs[0], relIDs.size());
 
     int numMissedPackets = 0;
-    for(size_t i = 0; i+1 < cs->recvPacketIDs.size(); ++i)
+    for (size_t i = 0; i + 1 < cs->recvPacketIDs.size(); ++i)
     {
-        assert(relIDs[i+1] > relIDs[i]);
-        numMissedPackets += relIDs[i+1] - relIDs[i] - 1;
+        assert(relIDs[i + 1] > relIDs[i]);
+        numMissedPackets += relIDs[i + 1] - relIDs[i] - 1;
     }
 
     packetLossRate = (float)numMissedPackets / (cs->recvPacketIDs.size() + numMissedPackets);
     packetLossCount = (float)numMissedPackets * 1000.f / (float)Clock::TimespanToMillisecondsD(maxTickAge, timeNow);
 }
 
-void AppendU16ToVector(std::vector<char> &data, unsigned long value)
+void AppendU16ToVector(std::vector<char>& data, unsigned long value)
 {
-    data.insert(data.end(), (const char *)&value, (const char *)&value + 2);
+    data.insert(data.end(), (const char*)&value, (const char*)&value + 2);
 }
 
-bool UDPMessageConnection::HandleMessage(packet_id_t packetID, message_id_t messageID, const char *data, size_t numBytes)
+bool UDPMessageConnection::HandleMessage(
+    packet_id_t packetID, message_id_t messageID, const char* data, size_t numBytes)
 {
     AssertInWorkerThreadContext();
 
-    switch(messageID)
+    switch (messageID)
     {
-    case MsgIdPingRequest:
-    case MsgIdPingReply:
-        return false; // We don't do anything with these messages, the MessageConnection base class handles these.
+        case MsgIdPingRequest:
+        case MsgIdPingReply:
+            return false;  // We don't do anything with these messages, the MessageConnection base class handles these.
 
-    case MsgIdPacketAck:
-        HandlePacketAckMessage(data, numBytes);
-        return true;
-    case MsgIdDisconnect:
-        HandleDisconnectMessage();
-        return true;
-    case MsgIdDisconnectAck:
-        HandleDisconnectAckMessage();
-        return true;
-    default:
-        // For each application-level message received, ask the application to extract the Content ID of the message from the
-        // message to us, so that we can track obsolete data receivals and discard such messages.
-        if (!inboundMessageHandler)
-            return false;
-        else
-        {
-            u32 contentID = inboundMessageHandler->ComputeContentID(messageID, data, numBytes);
-            if (contentID != 0 && CheckAndSaveContentIDStamp(messageID, contentID, packetID) == false)
+        case MsgIdPacketAck:
+            HandlePacketAckMessage(data, numBytes);
+            return true;
+        case MsgIdDisconnect:
+            HandleDisconnectMessage();
+            return true;
+        case MsgIdDisconnectAck:
+            HandleDisconnectAckMessage();
+            return true;
+        default:
+            // For each application-level message received, ask the application to extract the Content ID of the message
+            // from the message to us, so that we can track obsolete data receivals and discard such messages.
+            if (!inboundMessageHandler)
+                return false;
+            else
             {
-                KNET_LOG(LogVerbose, "MessageID %d in packetID %d and contentID %d is obsolete! Skipped.", (int)messageID, (int)packetID, (int)contentID);
-                return true;
+                u32 contentID = inboundMessageHandler->ComputeContentID(messageID, data, numBytes);
+                if (contentID != 0 && CheckAndSaveContentIDStamp(messageID, contentID, packetID) == false)
+                {
+                    KNET_LOG(LogVerbose, "MessageID %d in packetID %d and contentID %d is obsolete! Skipped.",
+                        (int)messageID, (int)packetID, (int)contentID);
+                    return true;
+                }
+                return false;
             }
-            return false;
-        }
     }
 }
 
@@ -1303,18 +1367,12 @@ void UDPMessageConnection::DumpConnectionStatus() const
         "\tPacket loss rate: %.2f.\n"
         "\tDatagrams in: %.2f/sec.\n"
         "\tDatagrams out: %.2f/sec.\n",
-    retransmissionTimeout,
-    datagramSendRate,
-    smoothedRTT,
-    rttVariation,
-    (int)outboundPacketAckTrack.Size(), ///\todo Accessing this variable is not thread-safe.
-    (int)inboundPacketAckTrack.size(), ///\todo Accessing this variable is not thread-safe.
-    packetLossCount,
-    packetLossRate,
-    PacketsInPerSec(),
-    PacketsOutPerSec());
+        retransmissionTimeout, datagramSendRate, smoothedRTT, rttVariation,
+        (int)outboundPacketAckTrack.Size(),  ///\todo Accessing this variable is not thread-safe.
+        (int)inboundPacketAckTrack.size(),   ///\todo Accessing this variable is not thread-safe.
+        packetLossCount, packetLossRate, PacketsInPerSec(), PacketsOutPerSec());
 
     KNET_LOGUSER(str);
 }
 
-} // ~kNet
+}  // ~kNet

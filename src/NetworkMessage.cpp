@@ -3,7 +3,7 @@
 // Author(s):       kNet Authors <https://github.com/juj/kNet>
 //                  iFarbod <>
 //
-// Copyright (c) 2015-2017 CtNorth Team
+// Copyright (c) 2015-2017 Project CTNorth
 //
 // Distributed under the MIT license (See accompanying file LICENSE or copy at
 // https://opensource.org/licenses/MIT)
@@ -19,31 +19,31 @@
 namespace kNet
 {
 
-NetworkMessage::NetworkMessage() :
-    data(0),
-    priority(0),
-    id(0),
-    contentID(0),
-    reliable(true),
-    inOrder(true),
-    obsolete(false),
-    receivedPacketID(0),
-    messageNumber(0),
-    reliableMessageNumber(0),
-    sendCount(0),
-    fragmentIndex(0),
-    dataCapacity(0),
-    dataSize(0),
-    transfer(0)
+NetworkMessage::NetworkMessage()
+    : data(0),
+      priority(0),
+      id(0),
+      contentID(0),
+      reliable(true),
+      inOrder(true),
+      obsolete(false),
+      receivedPacketID(0),
+      messageNumber(0),
+      reliableMessageNumber(0),
+      sendCount(0),
+      fragmentIndex(0),
+      dataCapacity(0),
+      dataSize(0),
+      transfer(0)
 {
 }
 
-NetworkMessage::NetworkMessage(const NetworkMessage &rhs)
+NetworkMessage::NetworkMessage(const NetworkMessage& rhs)
 {
     *this = rhs;
 }
 
-NetworkMessage &NetworkMessage::operator=(const NetworkMessage &rhs)
+NetworkMessage& NetworkMessage::operator=(const NetworkMessage& rhs)
 {
     if (this == &rhs)
         return *this;
@@ -75,9 +75,9 @@ void NetworkMessage::Resize(size_t newBytes, bool discard)
     dataSize = newBytes;
 
     if (newBytes <= dataCapacity)
-        return; // No need to reallocate, we can fit the requested amount of bytes.
+        return;  // No need to reallocate, we can fit the requested amount of bytes.
 
-    char *newData = new char[newBytes];
+    char* newData = new char[newBytes];
     if (!discard)
         memcpy(newData, data, dataCapacity);
 
@@ -86,4 +86,4 @@ void NetworkMessage::Resize(size_t newBytes, bool discard)
     dataCapacity = newBytes;
 }
 
-} // ~kNet
+}  // ~kNet

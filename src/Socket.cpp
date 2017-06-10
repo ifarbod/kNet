@@ -3,7 +3,7 @@
 // Author(s):       kNet Authors <https://github.com/juj/kNet>
 //                  iFarbod <>
 //
-// Copyright (c) 2015-2017 CtNorth Team
+// Copyright (c) 2015-2017 Project CTNorth
 //
 // Distributed under the MIT license (See accompanying file LICENSE or copy at
 // https://opensource.org/licenses/MIT)
@@ -11,26 +11,26 @@
 /** @file Socket.cpp
     @brief */
 
-#include <string>
 #include <cassert>
-#include <utility>
 #include <sstream>
+#include <string>
+#include <utility>
 
 #include "kNet/DebugMemoryLeakCheck.hpp"
 
 #include "kNet/Network.hpp"
 
-#include "kNet/Socket.hpp"
-#include "kNet/NetworkLogging.hpp"
 #include "kNet/EventArray.hpp"
+#include "kNet/NetworkLogging.hpp"
+#include "kNet/Socket.hpp"
 
 using namespace std;
 
 #ifndef _WIN32
 #include <fcntl.h>
-#include <sys/types.h>
-#include <sys/socket.h>
 #include <netinet/tcp.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 #include <unistd.h>
 #endif
 
@@ -44,11 +44,13 @@ namespace kNet
 
 std::string SocketTransportLayerToString(SocketTransportLayer transport)
 {
-    switch(transport)
+    switch (transport)
     {
-    case SocketOverUDP: return "UDP";
-    case SocketOverTCP: return "TCP";
-    default:
+        case SocketOverUDP:
+            return "UDP";
+        case SocketOverTCP:
+            return "TCP";
+        default:
         {
             std::stringstream ss;
             ss << "Invalid SocketTransportLayer (" << (int)transport << ")!";
@@ -57,7 +59,7 @@ std::string SocketTransportLayerToString(SocketTransportLayer transport)
     }
 }
 
-SocketTransportLayer StringToSocketTransportLayer(const char *str)
+SocketTransportLayer StringToSocketTransportLayer(const char* str)
 {
     if (!str)
         return InvalidTransportLayer;
@@ -68,15 +70,17 @@ SocketTransportLayer StringToSocketTransportLayer(const char *str)
     return InvalidTransportLayer;
 }
 
-
 std::string SocketTypeToString(SocketType type)
 {
-    switch(type)
+    switch (type)
     {
-    case ServerListenSocket: return "Server listen socket";
-    case ServerClientSocket: return "Server client socket";
-    case ClientSocket: return "Client socket";
-    default:
+        case ServerListenSocket:
+            return "Server listen socket";
+        case ServerClientSocket:
+            return "Server client socket";
+        case ClientSocket:
+            return "Client socket";
+        default:
         {
             std::stringstream ss;
             ss << "Invalid SocketType (" << (int)type << ")!";
@@ -86,15 +90,16 @@ std::string SocketTypeToString(SocketType type)
 }
 
 Socket::Socket()
-:connectSocket(INVALID_SOCKET),
-transport(InvalidTransportLayer),
-type(InvalidSocketType),
-maxSendSize(0),
-writeOpen(false),
-readOpen(false)
+    : connectSocket(INVALID_SOCKET),
+      transport(InvalidTransportLayer),
+      type(InvalidSocketType),
+      maxSendSize(0),
+      writeOpen(false),
+      readOpen(false)
 #ifdef _WIN32
-,queuedReceiveBuffers(numConcurrentReceiveBuffers)
-,queuedSendBuffers(numConcurrentSendBuffers)
+      ,
+      queuedReceiveBuffers(numConcurrentReceiveBuffers),
+      queuedSendBuffers(numConcurrentSendBuffers)
 #endif
 {
     localEndPoint.Reset();
@@ -103,24 +108,31 @@ readOpen(false)
 
 Socket::~Socket()
 {
-    // We cannot Close() the socket here, since the same underlying BSD SOCKET handle can be shared
-    // between multiple Socket objects. We rely instead to non-RAII behavior and manually remembering to
-    // Close().
+// We cannot Close() the socket here, since the same underlying BSD SOCKET handle can be shared
+// between multiple Socket objects. We rely instead to non-RAII behavior and manually remembering to
+// Close().
 #ifdef _WIN32
     FreeOverlappedTransferBuffers();
 #endif
 }
 
-Socket::Socket(SOCKET connection, const EndPoint &localEndPoint_, const char *localHostName_,
-    const EndPoint &remoteEndPoint_, const char *remoteHostName_,
-    SocketTransportLayer transport_, SocketType type_, size_t maxSendSize_)
-:connectSocket(connection), localEndPoint(localEndPoint_), localHostName(localHostName_),
-remoteEndPoint(remoteEndPoint_), remoteHostName(remoteHostName_),
-transport(transport_), type(type_), maxSendSize(maxSendSize_),
-writeOpen(true), readOpen(true)
+Socket::Socket(SOCKET connection, const EndPoint& localEndPoint_, const char* localHostName_,
+    const EndPoint& remoteEndPoint_, const char* remoteHostName_, SocketTransportLayer transport_, SocketType type_,
+    size_t maxSendSize_)
+    : connectSocket(connection),
+      localEndPoint(localEndPoint_),
+      localHostName(localHostName_),
+      remoteEndPoint(remoteEndPoint_),
+      remoteHostName(remoteHostName_),
+      transport(transport_),
+      type(type_),
+      maxSendSize(maxSendSize_),
+      writeOpen(true),
+      readOpen(true)
 #ifdef _WIN32
-,queuedReceiveBuffers(numConcurrentReceiveBuffers)
-,queuedSendBuffers(numConcurrentSendBuffers)
+      ,
+      queuedReceiveBuffers(numConcurrentReceiveBuffers),
+      queuedSendBuffers(numConcurrentSendBuffers)
 #endif
 {
     SetSendBufferSize(512 * 1024);
@@ -128,16 +140,15 @@ writeOpen(true), readOpen(true)
     udpPeerAddress = remoteEndPoint.ToSockAddrIn();
 }
 
-Socket::Socket(const Socket &rhs)
+Socket::Socket(const Socket& rhs)
 #ifdef _WIN32
-:queuedReceiveBuffers(numConcurrentReceiveBuffers)
-,queuedSendBuffers(numConcurrentSendBuffers)
+    : queuedReceiveBuffers(numConcurrentReceiveBuffers), queuedSendBuffers(numConcurrentSendBuffers)
 #endif
 {
     *this = rhs;
 }
 
-Socket &Socket::operator=(const Socket &rhs)
+Socket& Socket::operator=(const Socket& rhs)
 {
 #ifdef _WIN32
     // We would be losing data if Socket is copied from old to new when data is present in the receive buffers,
@@ -168,9 +179,9 @@ bool Socket::Connected() const
     return connectSocket != INVALID_SOCKET;
 }
 
-OverlappedTransferBuffer *AllocateOverlappedTransferBuffer(int bytes)
+OverlappedTransferBuffer* AllocateOverlappedTransferBuffer(int bytes)
 {
-    OverlappedTransferBuffer *buffer = new OverlappedTransferBuffer;
+    OverlappedTransferBuffer* buffer = new OverlappedTransferBuffer;
     memset(buffer, 0, sizeof(OverlappedTransferBuffer));
     buffer->buffer.buf = new char[bytes];
     buffer->buffer.len = bytes;
@@ -190,7 +201,7 @@ OverlappedTransferBuffer *AllocateOverlappedTransferBuffer(int bytes)
     return buffer;
 }
 
-void DeleteOverlappedTransferBuffer(OverlappedTransferBuffer *buffer)
+void DeleteOverlappedTransferBuffer(OverlappedTransferBuffer* buffer)
 {
     if (!buffer)
         return;
@@ -208,14 +219,16 @@ void Socket::SetSendBufferSize(int bytes)
 {
     socklen_t len = sizeof(bytes);
     if (setsockopt(connectSocket, SOL_SOCKET, SO_SNDBUF, (char*)&bytes, len))
-        KNET_LOG(LogError, "Socket::SetSendBufferSize: setsockopt failed with error %s!", Network::GetLastErrorString().c_str());
+        KNET_LOG(LogError, "Socket::SetSendBufferSize: setsockopt failed with error %s!",
+            Network::GetLastErrorString().c_str());
 }
 
 void Socket::SetReceiveBufferSize(int bytes)
 {
     socklen_t len = sizeof(bytes);
     if (setsockopt(connectSocket, SOL_SOCKET, SO_RCVBUF, (char*)&bytes, len))
-        KNET_LOG(LogError, "Socket::SetReceiveBufferSize: setsockopt failed with error %s!", Network::GetLastErrorString().c_str());
+        KNET_LOG(LogError, "Socket::SetReceiveBufferSize: setsockopt failed with error %s!",
+            Network::GetLastErrorString().c_str());
 }
 
 int Socket::SendBufferSize() const
@@ -224,7 +237,8 @@ int Socket::SendBufferSize() const
     socklen_t len = sizeof(bytes);
     if (getsockopt(connectSocket, SOL_SOCKET, SO_SNDBUF, (char*)&bytes, &len))
     {
-        KNET_LOG(LogError, "Socket::SendBufferSize: getsockopt failed with error %s!", Network::GetLastErrorString().c_str());
+        KNET_LOG(LogError, "Socket::SendBufferSize: getsockopt failed with error %s!",
+            Network::GetLastErrorString().c_str());
         return 0;
     }
     return bytes;
@@ -236,7 +250,8 @@ int Socket::ReceiveBufferSize() const
     socklen_t len = sizeof(bytes);
     if (getsockopt(connectSocket, SOL_SOCKET, SO_RCVBUF, (char*)&bytes, &len))
     {
-        KNET_LOG(LogError, "Socket::ReceiveBufferSize: getsockopt failed with error %s!", Network::GetLastErrorString().c_str());
+        KNET_LOG(LogError, "Socket::ReceiveBufferSize: getsockopt failed with error %s!",
+            Network::GetLastErrorString().c_str());
         return 0;
     }
 
@@ -244,17 +259,18 @@ int Socket::ReceiveBufferSize() const
 }
 
 #ifdef _WIN32
-void Socket::EnqueueNewReceiveBuffer(OverlappedTransferBuffer *buffer)
+void Socket::EnqueueNewReceiveBuffer(OverlappedTransferBuffer* buffer)
 {
     if (!readOpen || queuedReceiveBuffers.CapacityLeft() == 0 || IsUDPSlaveSocket())
     {
-        DeleteOverlappedTransferBuffer(buffer); // buffer may be a zero pointer, but that is alright.
+        DeleteOverlappedTransferBuffer(buffer);  // buffer may be a zero pointer, but that is alright.
         return;
     }
 
     if (!buffer)
     {
-        const int receiveBufferSize = 16384; // This is best to be at least 9K (the largest size of jumbo datagrams commonly supported)
+        const int receiveBufferSize =
+            16384;  // This is best to be at least 9K (the largest size of jumbo datagrams commonly supported)
         buffer = AllocateOverlappedTransferBuffer(receiveBufferSize);
         if (!buffer)
         {
@@ -272,28 +288,35 @@ void Socket::EnqueueNewReceiveBuffer(OverlappedTransferBuffer *buffer)
     if (IsUDPServerSocket())
     {
         buffer->fromLen = sizeof(buffer->from);
-        ret = WSARecvFrom(connectSocket, &buffer->buffer, 1, (LPDWORD)&buffer->bytesContains, &flags, (sockaddr*)&buffer->from, &buffer->fromLen, &buffer->overlapped, 0);
+        ret = WSARecvFrom(connectSocket, &buffer->buffer, 1, (LPDWORD)&buffer->bytesContains, &flags,
+            (sockaddr*)&buffer->from, &buffer->fromLen, &buffer->overlapped, 0);
     }
     else
     {
-        ret = WSARecv(connectSocket, &buffer->buffer, 1, (LPDWORD)&buffer->bytesContains, &flags, &buffer->overlapped, 0);
+        ret =
+            WSARecv(connectSocket, &buffer->buffer, 1, (LPDWORD)&buffer->bytesContains, &flags, &buffer->overlapped, 0);
     }
 
     int error = (ret == 0) ? 0 : Network::GetLastError();
-    if (ret == 0 || (ret == SOCKET_ERROR && error == WSA_IO_PENDING)) // If ret is not 0, ret == SOCKET_ERROR according to MSDN. http://msdn.microsoft.com/en-us/library/ms741688(VS.85).aspx
+    if (ret == 0 || (ret == SOCKET_ERROR &&
+                        error == WSA_IO_PENDING))  // If ret is not 0, ret == SOCKET_ERROR according to MSDN.
+                                                   // http://msdn.microsoft.com/en-us/library/ms741688(VS.85).aspx
     {
         if (ret == 0 && buffer->bytesContains == 0)
         {
             if (IsUDPServerSocket())
                 KNET_LOG(LogError, "Unexpected: Received a message of 0 bytes on a UDP server socket!");
 
-            KNET_LOG(LogInfo, "Socket::EnqueueNewReceiveBuffer: Received 0 bytes from the network. Read connection closed in socket %s.", ToString().c_str());
+            KNET_LOG(LogInfo,
+                "Socket::EnqueueNewReceiveBuffer: Received 0 bytes from the network. Read connection closed in socket "
+                "%s.",
+                ToString().c_str());
             readOpen = false;
             DeleteOverlappedTransferBuffer(buffer);
             return;
         }
-        // Return value 0: The operation completed and we have received new data. Push it to a queue for the user to receive.
-        // WSA_IO_PENDING: The operation was successfully enqueued.
+        // Return value 0: The operation completed and we have received new data. Push it to a queue for the user to
+        // receive. WSA_IO_PENDING: The operation was successfully enqueued.
         bool success = queuedReceiveBuffers.Insert(buffer);
         if (!success)
         {
@@ -306,7 +329,8 @@ void Socket::EnqueueNewReceiveBuffer(OverlappedTransferBuffer *buffer)
         if (IsUDPServerSocket())
             KNET_LOG(LogError, "Unexpected: Received WSAEDISCON on a UDP server socket!");
 
-        KNET_LOG(LogError, "Socket::EnqueueNewReceivebuffer: WSAEDISCON. Connection closed in socket %s.", ToString().c_str());
+        KNET_LOG(LogError, "Socket::EnqueueNewReceivebuffer: WSAEDISCON. Connection closed in socket %s.",
+            ToString().c_str());
         readOpen = false;
         ///\todo Should do writeOpen = false; here as well?
         DeleteOverlappedTransferBuffer(buffer);
@@ -316,36 +340,40 @@ void Socket::EnqueueNewReceiveBuffer(OverlappedTransferBuffer *buffer)
     {
         if (error != WSAEWOULDBLOCK && error != 0)
         {
-            KNET_LOG(LogError, "Socket::EnqueueNewReceiveBuffer: %s for overlapped socket %s failed! Error: %s.", IsUDPServerSocket() ? "WSARecvFrom" : "WSARecv", ToString().c_str(), Network::GetErrorString(error).c_str());
+            KNET_LOG(LogError, "Socket::EnqueueNewReceiveBuffer: %s for overlapped socket %s failed! Error: %s.",
+                IsUDPServerSocket() ? "WSARecvFrom" : "WSARecv", ToString().c_str(),
+                Network::GetErrorString(error).c_str());
 
             // We never close the server socket as a reaction on any error, since an error on one client could shut down
-            // the whole server for all clients. This check is mainly here to ignore the 10054 error (WSAECONNRESET) which
-            // is returned when UDP clients give back a ICMP Host Unreachable message, but since there may be other
-            // client-specific errors, we don't explicitly check for the 10054 case only.
+            // the whole server for all clients. This check is mainly here to ignore the 10054 error (WSAECONNRESET)
+            // which is returned when UDP clients give back a ICMP Host Unreachable message, but since there may be
+            // other client-specific errors, we don't explicitly check for the 10054 case only.
             if (!IsUDPServerSocket())
             {
-                KNET_LOG(LogError, "Socket::EnqueueNewReceiveBuffer: Closing down socket.",  Network::GetErrorString(error).c_str());
+                KNET_LOG(LogError, "Socket::EnqueueNewReceiveBuffer: Closing down socket.",
+                    Network::GetErrorString(error).c_str());
                 readOpen = false;
                 writeOpen = false;
                 Close();
             }
         }
 
-        DeleteOverlappedTransferBuffer(buffer); // We failed to queue the buffer, free it up immediately to avoid leaking memory.
+        DeleteOverlappedTransferBuffer(
+            buffer);  // We failed to queue the buffer, free it up immediately to avoid leaking memory.
         return;
     }
 }
 #endif
 
-void DumpBuffer(const char *description, const char *data, int size)
+void DumpBuffer(const char* description, const char* data, int size)
 {
     printf("%s (%d bytes): ", description, size);
-    for(int i = 0; i < min(size, 50); ++i)
+    for (int i = 0; i < min(size, 50); ++i)
         printf("%02X ", (unsigned int)(unsigned char)data[i]);
     printf("\n");
 }
 
-size_t Socket::Receive(char *dst, size_t maxBytes, EndPoint *endPoint)
+size_t Socket::Receive(char* dst, size_t maxBytes, EndPoint* endPoint)
 {
     assert(dst);
     assert(maxBytes > 0);
@@ -358,8 +386,9 @@ size_t Socket::Receive(char *dst, size_t maxBytes, EndPoint *endPoint)
     if (!readOpen)
         return 0;
 
-    if (IsUDPSlaveSocket()) // UDP slave sockets are never read directly. Instead the UDP server socket reads all client data.
-        return 0; // So, if we accidentally come here to read a UDP slave socket, act as if it never received any data.
+    if (IsUDPSlaveSocket())  // UDP slave sockets are never read directly. Instead the UDP server socket reads all
+                             // client data.
+        return 0;  // So, if we accidentally come here to read a UDP slave socket, act as if it never received any data.
 
     if (IsUDPServerSocket())
     {
@@ -370,7 +399,8 @@ size_t Socket::Receive(char *dst, size_t maxBytes, EndPoint *endPoint)
         {
             int error = Network::GetLastError();
             if (error != KNET_EWOULDBLOCK && error != 0)
-                KNET_LOG(LogError, "Socket::Receive: recvfrom failed: %s in socket %s", Network::GetErrorString(error).c_str(), ToString().c_str());
+                KNET_LOG(LogError, "Socket::Receive: recvfrom failed: %s in socket %s",
+                    Network::GetErrorString(error).c_str(), ToString().c_str());
 
             return 0;
         }
@@ -383,7 +413,8 @@ size_t Socket::Receive(char *dst, size_t maxBytes, EndPoint *endPoint)
         return numBytesRead;
     }
 
-    // If we reach here, this socket is a tcp connection socket (server->client or client->server), or a udp client->server socket.
+    // If we reach here, this socket is a tcp connection socket (server->client or client->server), or a udp
+    // client->server socket.
 
     int ret = recv(connectSocket, dst, maxBytes, 0);
 
@@ -394,7 +425,8 @@ size_t Socket::Receive(char *dst, size_t maxBytes, EndPoint *endPoint)
     }
     else if (ret == 0)
     {
-        KNET_LOG(LogInfo, "Socket::Receive: Received 0 bytes from network. Read-connection closed to socket %s.", ToString().c_str());
+        KNET_LOG(LogInfo, "Socket::Receive: Received 0 bytes from network. Read-connection closed to socket %s.",
+            ToString().c_str());
         readOpen = false;
         return 0;
     }
@@ -403,12 +435,13 @@ size_t Socket::Receive(char *dst, size_t maxBytes, EndPoint *endPoint)
         int error = Network::GetLastError();
         if (error != KNET_EWOULDBLOCK && error != 0)
         {
-            KNET_LOG(LogError, "Socket::Receive: recv failed in socket %s. Error %s", ToString().c_str(), Network::GetErrorString(error).c_str());
+            KNET_LOG(LogError, "Socket::Receive: recv failed in socket %s. Error %s", ToString().c_str(),
+                Network::GetErrorString(error).c_str());
 
             // We never close the server socket as a reaction on any error, since an error on one client could shut down
-            // the whole server for all clients. This check is mainly here to ignore the 10054 error (WSAECONNRESET) which
-            // is returned when UDP clients give back a ICMP Host Unreachable message, but since there may be other
-            // client-specific errors, we don't explicitly check for the 10054 case only.
+            // the whole server for all clients. This check is mainly here to ignore the 10054 error (WSAECONNRESET)
+            // which is returned when UDP clients give back a ICMP Host Unreachable message, but since there may be
+            // other client-specific errors, we don't explicitly check for the 10054 case only.
             if (!IsUDPServerSocket())
             {
                 readOpen = false;
@@ -422,7 +455,8 @@ size_t Socket::Receive(char *dst, size_t maxBytes, EndPoint *endPoint)
 
 bool Socket::IsOverlappedReceiveReady() const
 {
-    if (IsUDPSlaveSocket()) // UDP slave sockets are never read directly. For these sockets, act as if they're never ready for reads.
+    if (IsUDPSlaveSocket())  // UDP slave sockets are never read directly. For these sockets, act as if they're never
+                             // ready for reads.
         return false;
 
 #ifdef _WIN32
@@ -441,7 +475,8 @@ bool Socket::IsOverlappedReceiveReady() const
 
 Event Socket::GetOverlappedReceiveEvent()
 {
-    if (IsUDPSlaveSocket()) // UDP slave sockets are never read directly. For these sockets, return a null event that never fires.
+    if (IsUDPSlaveSocket())  // UDP slave sockets are never read directly. For these sockets, return a null event that
+                             // never fires.
         return Event();
 
 #ifdef _WIN32
@@ -449,14 +484,14 @@ Event Socket::GetOverlappedReceiveEvent()
     {
         /// Prime the receive buffers to the full capacity if they weren't so yet.
         const int capacityLeft = queuedReceiveBuffers.CapacityLeft();
-        for(int i = 0; i < capacityLeft; ++i)
+        for (int i = 0; i < capacityLeft; ++i)
             EnqueueNewReceiveBuffer();
     }
 
     if (queuedReceiveBuffers.Size() == 0)
         return Event();
 
-    OverlappedTransferBuffer *receivedData = *queuedReceiveBuffers.Front();
+    OverlappedTransferBuffer* receivedData = *queuedReceiveBuffers.Front();
     assert(receivedData);
 
     return Event(receivedData->overlapped.hEvent, EventWaitRead);
@@ -474,7 +509,7 @@ Event Socket::GetOverlappedSendEvent()
     if (queuedSendBuffers.Size() == 0)
         return Event();
 
-    OverlappedTransferBuffer *sentData = *queuedSendBuffers.Front();
+    OverlappedTransferBuffer* sentData = *queuedSendBuffers.Front();
     assert(sentData);
 
     return Event(sentData->overlapped.hEvent, EventWaitWrite);
@@ -483,33 +518,37 @@ Event Socket::GetOverlappedSendEvent()
 #endif
 }
 
-OverlappedTransferBuffer *Socket::BeginReceive()
+OverlappedTransferBuffer* Socket::BeginReceive()
 {
-    // UDP 'slave socket' is a socket descriptor on the server side that is a copy of the single UDP server listen socket.
-    // The slave sockets don't receive data directly, but the server socket is used instead to receive data for them.
+    // UDP 'slave socket' is a socket descriptor on the server side that is a copy of the single UDP server listen
+    // socket. The slave sockets don't receive data directly, but the server socket is used instead to receive data for
+    // them.
     if (IsUDPSlaveSocket())
     {
 #ifdef _WIN32
-        assert(queuedReceiveBuffers.Size() == 0); // We shouldn't ever have queued a single receive buffer for this Socket.
+        assert(queuedReceiveBuffers.Size() ==
+               0);  // We shouldn't ever have queued a single receive buffer for this Socket.
 #endif
-        return 0; // If we happen to come here, act as if the socket never received any data.
+        return 0;  // If we happen to come here, act as if the socket never received any data.
     }
 
 #ifdef _WIN32
     if (readOpen)
     {
-        // Insert new empty receive buffers to the Overlapped Transfer receive queue until we have a full capacity queue primed.
+        // Insert new empty receive buffers to the Overlapped Transfer receive queue until we have a full capacity queue
+        // primed.
         const int capacityLeft = queuedReceiveBuffers.CapacityLeft();
-        for(int i = 0; i < capacityLeft; ++i)
+        for (int i = 0; i < capacityLeft; ++i)
             EnqueueNewReceiveBuffer();
     }
 
     if (queuedReceiveBuffers.Size() == 0)
         return 0;
 
-    OverlappedTransferBuffer *receivedData = *queuedReceiveBuffers.Front();
+    OverlappedTransferBuffer* receivedData = *queuedReceiveBuffers.Front();
     DWORD flags = 0;
-    BOOL ret = WSAGetOverlappedResult(connectSocket, &receivedData->overlapped, (LPDWORD)&receivedData->bytesContains, FALSE, &flags);
+    BOOL ret = WSAGetOverlappedResult(
+        connectSocket, &receivedData->overlapped, (LPDWORD)&receivedData->bytesContains, FALSE, &flags);
     int error = (ret == TRUE) ? 0 : Network::GetLastError();
     if (ret == TRUE)
     {
@@ -524,12 +563,15 @@ OverlappedTransferBuffer *Socket::BeginReceive()
             {
                 if (readOpen)
                 {
-                    KNET_LOG(LogInfo, "Socket::BeginReceive: Received 0 bytes from the network. Read connection closed in socket %s.", ToString().c_str());
+                    KNET_LOG(LogInfo,
+                        "Socket::BeginReceive: Received 0 bytes from the network. Read connection closed in socket %s.",
+                        ToString().c_str());
                     readOpen = false;
                 }
             }
             else
-                KNET_LOG(LogVerbose, "Socket::BeginReceive: Server received a UDP datagram of 0 bytes from a client! This is a malformed kNet UDP datagram!");
+                KNET_LOG(LogVerbose, "Socket::BeginReceive: Server received a UDP datagram of 0 bytes from a client! "
+                                     "This is a malformed kNet UDP datagram!");
             return 0;
         }
 
@@ -540,7 +582,8 @@ OverlappedTransferBuffer *Socket::BeginReceive()
         queuedReceiveBuffers.PopFront();
         DeleteOverlappedTransferBuffer(receivedData);
         if (readOpen || writeOpen)
-            KNET_LOG(LogError, "Socket::BeginReceive: WSAEDISCON. Bidirectionally closing connection in socket %s.", ToString().c_str());
+            KNET_LOG(LogError, "Socket::BeginReceive: WSAEDISCON. Bidirectionally closing connection in socket %s.",
+                ToString().c_str());
         if (IsUDPServerSocket())
             KNET_LOG(LogError, "Socket::BeginReceive: Unexpected: Received WSAEDISCON on UDP server socket!");
         Close();
@@ -550,8 +593,13 @@ OverlappedTransferBuffer *Socket::BeginReceive()
     {
         queuedReceiveBuffers.PopFront();
         if (readOpen || writeOpen)
-            if (!(IsUDPServerSocket() && error == 10054)) // If we are running both UDP server and client on localhost, we can receive 10054 (Peer closed connection) on the server side, in which case, we ignore this error print.
-                KNET_LOG(LogError, "Socket::BeginReceive: WSAGetOverlappedResult failed with code %d when reading from an overlapped socket! Reason: %s.", error, Network::GetErrorString(error).c_str());
+            if (!(IsUDPServerSocket() && error == 10054))  // If we are running both UDP server and client on localhost,
+                                                           // we can receive 10054 (Peer closed connection) on the
+                                                           // server side, in which case, we ignore this error print.
+                KNET_LOG(LogError,
+                    "Socket::BeginReceive: WSAGetOverlappedResult failed with code %d when reading from an overlapped "
+                    "socket! Reason: %s.",
+                    error, Network::GetErrorString(error).c_str());
         DeleteOverlappedTransferBuffer(receivedData);
         // Mark this socket closed, unless the read error was on a UDP server socket, in which case we must ignore
         // the read error on this buffer (an error on a single client connection cannot shut down the whole server!)
@@ -567,7 +615,7 @@ OverlappedTransferBuffer *Socket::BeginReceive()
         return 0;
 
     const int receiveBufferSize = 4096;
-    OverlappedTransferBuffer *buffer = AllocateOverlappedTransferBuffer(receiveBufferSize);
+    OverlappedTransferBuffer* buffer = AllocateOverlappedTransferBuffer(receiveBufferSize);
     EndPoint source;
     buffer->bytesContains = Receive(buffer->buffer.buf, buffer->buffer.len, &source);
     if (buffer->bytesContains > 0)
@@ -585,7 +633,7 @@ OverlappedTransferBuffer *Socket::BeginReceive()
 #endif
 }
 
-void Socket::EndReceive(OverlappedTransferBuffer *buffer)
+void Socket::EndReceive(OverlappedTransferBuffer* buffer)
 {
 #ifdef _WIN32
     if (readOpen)
@@ -609,9 +657,11 @@ void Socket::Disconnect()
     {
         int result = shutdown(connectSocket, SD_SEND);
         if (result == KNET_SOCKET_ERROR)
-            KNET_LOG(LogError, "Socket::Disconnect(): TCP socket shutdown(SD_SEND) failed: %s in socket %s.", Network::GetLastErrorString().c_str(), ToString().c_str());
+            KNET_LOG(LogError, "Socket::Disconnect(): TCP socket shutdown(SD_SEND) failed: %s in socket %s.",
+                Network::GetLastErrorString().c_str(), ToString().c_str());
         else
-            KNET_LOG(LogInfo, "Socket::Disconnect(): TCP socket shutdown(SD_SEND) succeeded on socket %s.", ToString().c_str());
+            KNET_LOG(LogInfo, "Socket::Disconnect(): TCP socket shutdown(SD_SEND) succeeded on socket %s.",
+                ToString().c_str());
     }
 
     writeOpen = false;
@@ -635,13 +685,15 @@ void Socket::Close()
 
         int result = shutdown(connectSocket, SD_BOTH);
         if (result == KNET_SOCKET_ERROR)
-            KNET_LOG(LogError, "Socket::Close(): Socket shutdown(SD_BOTH) failed: %s in socket %s.", Network::GetLastErrorString().c_str(), ToString().c_str());
+            KNET_LOG(LogError, "Socket::Close(): Socket shutdown(SD_BOTH) failed: %s in socket %s.",
+                Network::GetLastErrorString().c_str(), ToString().c_str());
         else
             KNET_LOG(LogInfo, "Socket::Close(): Socket shutdown(SD_BOTH) succeeded on socket %s.", ToString().c_str());
 
         result = closesocket(connectSocket);
         if (result == KNET_SOCKET_ERROR)
-            KNET_LOG(LogError, "Socket::Close(): closesocket() failed: %s in socket %s.", Network::GetLastErrorString().c_str(), ToString().c_str());
+            KNET_LOG(LogError, "Socket::Close(): closesocket() failed: %s in socket %s.",
+                Network::GetLastErrorString().c_str(), ToString().c_str());
     }
 
     connectSocket = INVALID_SOCKET;
@@ -663,11 +715,12 @@ void Socket::Close()
 void Socket::FreeOverlappedTransferBuffers()
 {
     KNET_LOG(LogVerbose, "Socket::FreeOverlappedTransferBuffers(), this: %p.", this);
-/// \todo Use CancelIo to tear-down commited OverlappedTransferBuffers before freeing data. http://msdn.microsoft.com/en-us/library/aa363792(VS.85).aspx
-    while(queuedReceiveBuffers.Size() > 0)
+    /// \todo Use CancelIo to tear-down commited OverlappedTransferBuffers before freeing data.
+    /// http://msdn.microsoft.com/en-us/library/aa363792(VS.85).aspx
+    while (queuedReceiveBuffers.Size() > 0)
         DeleteOverlappedTransferBuffer(queuedReceiveBuffers.TakeFront());
 
-    while(queuedSendBuffers.Size() > 0)
+    while (queuedSendBuffers.Size() > 0)
         DeleteOverlappedTransferBuffer(queuedSendBuffers.TakeFront());
 }
 #endif
@@ -680,7 +733,8 @@ void Socket::SetBlocking(bool isBlocking)
 #ifdef _WIN32
     u_long nonBlocking = (isBlocking == false) ? 1 : 0;
     if (ioctlsocket(connectSocket, FIONBIO, &nonBlocking))
-        KNET_LOG(LogError, "Socket::SetBlocking: ioctlsocket failed with error %s!", Network::GetLastErrorString().c_str());
+        KNET_LOG(
+            LogError, "Socket::SetBlocking: ioctlsocket failed with error %s!", Network::GetLastErrorString().c_str());
 #else
     int flags = fcntl(connectSocket, F_GETFL, 0);
     if (!isBlocking)
@@ -691,7 +745,7 @@ void Socket::SetBlocking(bool isBlocking)
 }
 
 /// @return True on success, false otherwise.
-bool Socket::Send(const char *data, size_t numBytes)
+bool Socket::Send(const char* data, size_t numBytes)
 {
     if (connectSocket == INVALID_SOCKET)
     {
@@ -724,18 +778,20 @@ bool Socket::Send(const char *data, size_t numBytes)
         KNET_LOG(LogData, "Socket::EndSend: Sent out %d bytes to socket %s.", bytesSent, ToString().c_str());
         return true;
     }
-    else if (bytesSent > 0) // Managed to send some data, but not all bytes.
+    else if (bytesSent > 0)  // Managed to send some data, but not all bytes.
     {
-        assert(transport == SocketOverTCP); // Only TCP sockets should ever succeed 'partially'.
+        assert(transport == SocketOverTCP);  // Only TCP sockets should ever succeed 'partially'.
         // Our Socket::Send tries to guarantee that either all or nothing of the data is sent. We don't want
         // to report back to the upper layer that only part of the data was successfully sent. So, try to
         // re-issue the remainining bytes, but now in blocking mode, so we can wait for the rest of the data to
         // be sent.
-        const int socketWriteTimeout = 5000; // msecs.
+        const int socketWriteTimeout = 5000;  // msecs.
         bool waitSuccess = WaitForSendReady(socketWriteTimeout);
         if (!waitSuccess)
         {
-            KNET_LOG(LogError, "Socket::Send: Warning! Managed to only partially send out %d bytes out of %d bytes in the buffer, and socket did not transition to write-ready in the timeout period. Closing connection.",
+            KNET_LOG(LogError,
+                "Socket::Send: Warning! Managed to only partially send out %d bytes out of %d bytes in the buffer, and "
+                "socket did not transition to write-ready in the timeout period. Closing connection.",
                 bytesSent, (int)numBytes);
             Close();
             return false;
@@ -743,9 +799,9 @@ bool Socket::Send(const char *data, size_t numBytes)
         // Recursively call back to this function to process the remainder of the data.
         // Since bytesSent > 0, we should be making progress at each step of recursion, so there is no
         // danger of crashing the stack.
-        return Send(data+bytesSent, numBytes-bytesSent);
+        return Send(data + bytesSent, numBytes - bytesSent);
     }
-    else // Some kind of error occurred.
+    else  // Some kind of error occurred.
     {
         int error = Network::GetLastError();
 
@@ -760,7 +816,7 @@ bool Socket::Send(const char *data, size_t numBytes)
                 readOpen = false;
                 writeOpen = false;
             }
-            else // For all other sockets, it's ok to close (socket is not shared).
+            else  // For all other sockets, it's ok to close (socket is not shared).
                 Close();
         }
 
@@ -774,7 +830,7 @@ bool Socket::WaitForSendReady(int msecs)
     fd_set writeSet;
     FD_ZERO(&writeSet);
     FD_SET(connectSocket, &writeSet);
-    TIMEVAL tv = { msecs / 1000, (msecs % 1000) * 1000 };
+    TIMEVAL tv = {msecs / 1000, (msecs % 1000) * 1000};
     int ret = select(0, NULL, &writeSet, NULL, &tv);
     return ret != KNET_SOCKET_ERROR && ret != 0;
 #else
@@ -792,10 +848,10 @@ bool Socket::IsOverlappedSendReady()
     if (queuedSendBuffers.CapacityLeft() > 0)
         return true;
 
-    OverlappedTransferBuffer *sentData = *queuedSendBuffers.Front();
+    OverlappedTransferBuffer* sentData = *queuedSendBuffers.Front();
     DWORD flags = 0;
-    BOOL ret = WSAGetOverlappedResult(connectSocket, &sentData->overlapped, (LPDWORD)&sentData->bytesContains,
-        FALSE, &flags);
+    BOOL ret =
+        WSAGetOverlappedResult(connectSocket, &sentData->overlapped, (LPDWORD)&sentData->bytesContains, FALSE, &flags);
     return ret == TRUE;
 #else
     EventArray ea;
@@ -804,17 +860,17 @@ bool Socket::IsOverlappedSendReady()
 #endif
 }
 
-OverlappedTransferBuffer *Socket::BeginSend(int maxBytesToSend)
+OverlappedTransferBuffer* Socket::BeginSend(int maxBytesToSend)
 {
     if (!writeOpen)
         return 0;
 
-    // See if the oldest one of the previously submitted transfers has now finished,
-    // and reuse that buffer without allocating a new one, if so.
+// See if the oldest one of the previously submitted transfers has now finished,
+// and reuse that buffer without allocating a new one, if so.
 #ifdef _WIN32
     if (queuedSendBuffers.Size() > 0)
     {
-        OverlappedTransferBuffer *sentData = *queuedSendBuffers.Front();
+        OverlappedTransferBuffer* sentData = *queuedSendBuffers.Front();
         DWORD flags = 0;
         BOOL ret = WSAGetOverlappedResult(connectSocket, &sentData->overlapped, (LPDWORD)&sentData->bytesContains,
             (queuedSendBuffers.CapacityLeft() == 0) ? TRUE : FALSE, &flags);
@@ -827,20 +883,22 @@ OverlappedTransferBuffer *Socket::BeginSend(int maxBytesToSend)
             if (sentData->bytesAllocated < maxBytesToSend)
             {
                 DeleteOverlappedTransferBuffer(sentData);
-                return AllocateOverlappedTransferBuffer(maxBytesToSend); ///\todo In debug mode - track this pointer.
+                return AllocateOverlappedTransferBuffer(maxBytesToSend);  ///\todo In debug mode - track this pointer.
             }
             else
             {
                 // The existing transfer buffer is large enough. Prepare it for reuse and pass back to caller.
-                sentData->buffer.len = sentData->bytesAllocated; // This is the number of bytes that the client is allowed to fill.
-                sentData->bytesContains = 0; // No bytes currently in use.
+                sentData->buffer.len =
+                    sentData->bytesAllocated;  // This is the number of bytes that the client is allowed to fill.
+                sentData->bytesContains = 0;   // No bytes currently in use.
 
                 return sentData;
             }
         }
         if (ret == FALSE && error != WSA_IO_INCOMPLETE)
         {
-            KNET_LOG(LogError, "Socket::BeginSend: WSAGetOverlappedResult failed with an error %s, code %d != WSA_IO_INCOMPLETE!",
+            KNET_LOG(LogError,
+                "Socket::BeginSend: WSAGetOverlappedResult failed with an error %s, code %d != WSA_IO_INCOMPLETE!",
                 Network::GetErrorString(error).c_str(), error);
             writeOpen = false;
             return 0;
@@ -855,7 +913,7 @@ OverlappedTransferBuffer *Socket::BeginSend(int maxBytesToSend)
     return AllocateOverlappedTransferBuffer(maxBytesToSend);
 }
 
-bool Socket::EndSend(OverlappedTransferBuffer *sendBuffer)
+bool Socket::EndSend(OverlappedTransferBuffer* sendBuffer)
 {
     assert(sendBuffer);
     if (!sendBuffer)
@@ -874,7 +932,8 @@ bool Socket::EndSend(OverlappedTransferBuffer *sendBuffer)
     int ret;
 
     if (transport == SocketOverUDP)
-        ret = WSASendTo(connectSocket, &sendBuffer->buffer, 1, (LPDWORD)&bytesSent, 0, (sockaddr*)&udpPeerAddress, sizeof(udpPeerAddress), &sendBuffer->overlapped, 0);
+        ret = WSASendTo(connectSocket, &sendBuffer->buffer, 1, (LPDWORD)&bytesSent, 0, (sockaddr*)&udpPeerAddress,
+            sizeof(udpPeerAddress), &sendBuffer->overlapped, 0);
     else
         ret = WSASend(connectSocket, &sendBuffer->buffer, 1, (LPDWORD)&bytesSent, 0, &sendBuffer->overlapped, 0);
 
@@ -909,7 +968,7 @@ bool Socket::EndSend(OverlappedTransferBuffer *sendBuffer)
 #endif
 }
 
-void Socket::AbortSend(OverlappedTransferBuffer *send)
+void Socket::AbortSend(OverlappedTransferBuffer* send)
 {
     if (!writeOpen)
     {
@@ -940,20 +999,23 @@ std::string Socket::ToString() const
 {
     sockaddr_in addr;
     socklen_t namelen = sizeof(addr);
-    int peerRet = getpeername(connectSocket, (sockaddr*)&addr, &namelen); // Note: This works only if family==INETv4
+    int peerRet = getpeername(connectSocket, (sockaddr*)&addr, &namelen);  // Note: This works only if family==INETv4
     EndPoint peerName = EndPoint::FromSockAddrIn(addr);
 
-    int sockRet = getsockname(connectSocket, (sockaddr*)&addr, &namelen); // Note: This works only if family==INETv4
+    int sockRet = getsockname(connectSocket, (sockaddr*)&addr, &namelen);  // Note: This works only if family==INETv4
     EndPoint sockName = EndPoint::FromSockAddrIn(addr);
 
     char str[256];
-    sprintf(str, "%s:%d (%s, connected=%s, readOpen: %s, writeOpen: %s, maxSendSize=%d, sock: %s, peer: %s, socket: %d, this: %p)",
+    sprintf(str,
+        "%s:%d (%s, connected=%s, readOpen: %s, writeOpen: %s, maxSendSize=%d, sock: %s, peer: %s, socket: %d, this: "
+        "%p)",
         DestinationAddress(), (int)DestinationPort(),
-        (transport == SocketOverTCP) ? "TCP" : (IsUDPServerSocket() ? "UDP server" : (IsUDPSlaveSocket() ? "UDP Slave" : "UDP")),
-        Connected() ? "true" : "false", readOpen ? "true" : "false", writeOpen ? "true" : "false",
-        (int)maxSendSize, sockRet == 0 ? sockName.ToString().c_str() : "(-)",
-        peerRet == 0 ? peerName.ToString().c_str() : "(-)", (int)connectSocket,
-        this);
+        (transport == SocketOverTCP)
+            ? "TCP"
+            : (IsUDPServerSocket() ? "UDP server" : (IsUDPSlaveSocket() ? "UDP Slave" : "UDP")),
+        Connected() ? "true" : "false", readOpen ? "true" : "false", writeOpen ? "true" : "false", (int)maxSendSize,
+        sockRet == 0 ? sockName.ToString().c_str() : "(-)", peerRet == 0 ? peerName.ToString().c_str() : "(-)",
+        (int)connectSocket, this);
 
     return std::string(str);
 }
@@ -973,14 +1035,14 @@ void Socket::SetNaglesAlgorithmEnabled(bool enabled)
 
 #ifdef _WIN32
     BOOL nagleEnabled = enabled ? TRUE : FALSE;
-    int ret = setsockopt(connectSocket, IPPROTO_TCP, TCP_NODELAY, (const char *)&nagleEnabled, sizeof(nagleEnabled));
+    int ret = setsockopt(connectSocket, IPPROTO_TCP, TCP_NODELAY, (const char*)&nagleEnabled, sizeof(nagleEnabled));
 #else
     int nagleEnabled = enabled ? 1 : 0;
     int ret = setsockopt(connectSocket, IPPROTO_TCP, TCP_NODELAY, &nagleEnabled, sizeof(nagleEnabled));
 #endif
     if (ret != 0)
-        KNET_LOG(LogError, "Setting TCP_NODELAY=%s for socket %d failed. Reason: %s.",
-            enabled ? "true" : "false", (int)connectSocket, Network::GetLastErrorString().c_str());
+        KNET_LOG(LogError, "Setting TCP_NODELAY=%s for socket %d failed. Reason: %s.", enabled ? "true" : "false",
+            (int)connectSocket, Network::GetLastErrorString().c_str());
 }
 
-} // ~kNet
+}  // ~kNet

@@ -3,7 +3,7 @@
 // Author(s):       kNet Authors <https://github.com/juj/kNet>
 //                  iFarbod <>
 //
-// Copyright (c) 2015-2017 CtNorth Team
+// Copyright (c) 2015-2017 Project CTNorth
 //
 // Distributed under the MIT license (See accompanying file LICENSE or copy at
 // https://opensource.org/licenses/MIT)
@@ -13,39 +13,40 @@
 namespace kNet
 {
 
-NetworkSimulator::NetworkSimulator() :
-    enabled(false),
-    packetLossRate(0),
-    constantPacketSendDelay(0),
-    uniformRandomPacketSendDelay(0),
-    packetDuplicationRate(0.f),
-    corruptionType(CorruptDatagram),
-    corruptMessageId(0),
-    corruptToggleBitsRate(0),
-    corruptMinBits(0),
-    corruptMaxBits(0),
-    owner(0)
+NetworkSimulator::NetworkSimulator()
+    : enabled(false),
+      packetLossRate(0),
+      constantPacketSendDelay(0),
+      uniformRandomPacketSendDelay(0),
+      packetDuplicationRate(0.f),
+      corruptionType(CorruptDatagram),
+      corruptMessageId(0),
+      corruptToggleBitsRate(0),
+      corruptMinBits(0),
+      corruptMaxBits(0),
+      owner(0)
 {
 }
 
 NetworkSimulator::~NetworkSimulator()
 {
     if (queuedBuffers.size() > 0)
-        KNET_LOG(LogError, "NetworkSimulator: Leaked %d buffers with improper NetworkSimulator teardown!", (int)queuedBuffers.size());
+        KNET_LOG(LogError, "NetworkSimulator: Leaked %d buffers with improper NetworkSimulator teardown!",
+            (int)queuedBuffers.size());
 }
 
 /// Generates a float in half-open interval [0, 1[.
 static float rand01()
 {
-    assert(RAND_MAX >= 0x7FFF); ///\todo static assert.
-    return (float)(rand()&0x7FFF) / 0x8000;
+    assert(RAND_MAX >= 0x7FFF);  ///\todo static assert.
+    return (float)(rand() & 0x7FFF) / 0x8000;
 }
 
 /// Generates a float in closed interval [0, 1].
 static float rand01incl()
 {
-    assert(RAND_MAX >= 0x7FFF); ///\todo static assert.
-    return (float)(rand()&0x7FFF) / 0x7FFF;
+    assert(RAND_MAX >= 0x7FFF);  ///\todo static assert.
+    return (float)(rand() & 0x7FFF) / 0x7FFF;
 }
 
 void NetworkSimulator::Free()
@@ -53,18 +54,18 @@ void NetworkSimulator::Free()
     if (!owner || !owner->GetSocket())
         return;
 
-    for(size_t i = 0; i < queuedBuffers.size(); ++i)
+    for (size_t i = 0; i < queuedBuffers.size(); ++i)
         owner->GetSocket()->AbortSend(queuedBuffers[i].buffer);
     queuedBuffers.clear();
 }
 
-void NetworkSimulator::SubmitSendBuffer(kNet::OverlappedTransferBuffer *buffer, Socket *socket)
+void NetworkSimulator::SubmitSendBuffer(kNet::OverlappedTransferBuffer* buffer, Socket* socket)
 {
     if (rand01() < packetLossRate)
     {
         if (owner && owner->GetSocket())
             owner->GetSocket()->AbortSend(buffer);
-        return; // Dropped this packet!
+        return;  // Dropped this packet!
     }
 
     // Should we duplicate this packet?
@@ -100,7 +101,7 @@ void NetworkSimulator::SubmitSendBuffer(kNet::OverlappedTransferBuffer *buffer, 
 
 void NetworkSimulator::Process()
 {
-    for(size_t i = 0; i < queuedBuffers.size(); ++i)
+    for (size_t i = 0; i < queuedBuffers.size(); ++i)
         if (queuedBuffers[i].timeUntilTransfer.Test())
         {
             if (owner && owner->GetSocket())
@@ -110,13 +111,13 @@ void NetworkSimulator::Process()
         }
 }
 
-void NetworkSimulator::MaybeCorruptBufferToggleBits(void *buffer, size_t numBytes) const
+void NetworkSimulator::MaybeCorruptBufferToggleBits(void* buffer, size_t numBytes) const
 {
     // Should corrupt this data?
     if (rand01() < corruptToggleBitsRate)
     {
         int numBitsToCorrupt = corruptMinBits + (int)(rand01() * (corruptMaxBits - corruptMinBits + 1));
-        for(int i = 0; i < numBitsToCorrupt; ++i)
+        for (int i = 0; i < numBitsToCorrupt; ++i)
         {
             int byteIndex = (int)(rand01() * numBytes);
             int bitIndex = rand() % 8;
@@ -126,4 +127,4 @@ void NetworkSimulator::MaybeCorruptBufferToggleBits(void *buffer, size_t numByte
     }
 }
 
-} // ~kNet
+}  // ~kNet

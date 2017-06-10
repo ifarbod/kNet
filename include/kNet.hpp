@@ -5,7 +5,7 @@
 // Author(s):       kNet Authors <https://github.com/juj/kNet>
 //                  iFarbod <>
 //
-// Copyright (c) 2015-2017 CtNorth Team
+// Copyright (c) 2015-2017 Project CTNorth
 //
 // Distributed under the MIT license (See accompanying file LICENSE or copy at
 // https://opensource.org/licenses/MIT)
@@ -18,6 +18,7 @@
 #include "kNet/win32/WS2Include.hpp"
 #endif
 
+#include "kNet/64BitAllocDebugger.hpp"
 #include "kNet/Clock.hpp"
 #include "kNet/DataDeserializer.hpp"
 #include "kNet/DataSerializer.hpp"
@@ -45,4 +46,3 @@
 #include "kNet/Types.hpp"
 #include "kNet/VLEPacker.hpp"
 #include "kNet/WaitFreeQueue.hpp"
-#include "kNet/64BitAllocDebugger.hpp"

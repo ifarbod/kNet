@@ -3,7 +3,7 @@
 // Author(s):       kNet Authors <https://github.com/juj/kNet>
 //                  iFarbod <>
 //
-// Copyright (c) 2015-2017 CtNorth Team
+// Copyright (c) 2015-2017 Project CTNorth
 //
 // Distributed under the MIT license (See accompanying file LICENSE or copy at
 // https://opensource.org/licenses/MIT)
@@ -11,19 +11,19 @@
 /** @file NetworkLogging.cpp
     @brief Implements logging functionalities to stdout/file for different log channels. */
 
-#include <sstream>
-#include <iostream>
-#include <fstream>
 #include <cstdarg>
 #include <cstdio>
-#include <string>
 #include <cstring>
+#include <fstream>
+#include <iostream>
+#include <sstream>
+#include <string>
 
 #include "kNet/DebugMemoryLeakCheck.hpp"
 
-#include "kNet/NetworkLogging.hpp"
-#include "kNet/Lockable.hpp"
 #include "kNet/Clock.hpp"
+#include "kNet/Lockable.hpp"
+#include "kNet/NetworkLogging.hpp"
 
 #ifndef _WIN32
 #define _snprintf snprintf
@@ -60,9 +60,10 @@ string Time()
     return ss.str();
 }
 
-} // ~unnamed namespace
+}  // ~unnamed namespace
 
-void TimeOutputDebugStringVariadic(LogChannel logChannel, const char * /*filename*/, int /*lineNumber*/, const char *msg, ...)
+void TimeOutputDebugStringVariadic(
+    LogChannel logChannel, const char* /*filename*/, int /*lineNumber*/, const char* msg, ...)
 {
     if (!IsLogChannelActive(logChannel))
         return;
@@ -82,7 +83,7 @@ void TimeOutputDebugStringVariadic(LogChannel logChannel, const char * /*filenam
     va_end(args);
 }
 
-void TimeOutputDebugString(LogChannel logChannel, const char * /*filename*/, int /*lineNumber*/, const char *msg)
+void TimeOutputDebugString(LogChannel logChannel, const char* /*filename*/, int /*lineNumber*/, const char* msg)
 {
     if ((logChannel & kNetActiveLogChannels) == 0)
         return;
@@ -113,7 +114,7 @@ bool IsLogChannelActive(LogChannel channel)
     return (channel & kNetActiveLogChannels) != 0;
 }
 
-void SetLogFile(const char *filename)
+void SetLogFile(const char* filename)
 {
     Lockable<int>::LockType lock = logWriteMutex.Acquire();
 
@@ -138,4 +139,4 @@ void EnableMemoryLeakLoggingAtExit()
 #endif
 }
 
-} // ~kNet
+}  // ~kNet
